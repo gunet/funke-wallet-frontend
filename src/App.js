@@ -18,6 +18,35 @@ import Settings from './pages/Settings/Settings';
 import AddCredentials from './pages/AddCredentials/AddCredentials';
 import SendCredentials from './pages/SendCredentials/SendCredentials';
 
+import { openID4VCIClientMap } from './lib/main';
+
+setTimeout(() => {
+	console.log(openID4VCIClientMap.keys())
+	if (openID4VCIClientMap.size == 0) {
+		return;
+	}
+
+	const cl = openID4VCIClientMap.get('fed79862-af36-4fee-8e64-89e3c91091ed');
+	cl.handleAuthorizationResponse(window.location.href).catch(() => {
+		// if didnt handle
+
+		// then send authorization request
+		cl.getAvailableCredentialConfigurations().then((confs) => {
+			const selectedConf = confs['pid-sd-jwt'];
+			cl.generateAuthorizationRequest(selectedConf).then(({ url, request_uri }) => {
+				console.log("request_uri = ", request_uri)
+			}).catch((err) => {
+				console.error("Couldn't generate authz req")
+			});
+		}).catch((err) => {
+			console.error(err)
+		})
+	})
+
+
+	
+}, 2000)
+
 const Login = React.lazy(() => import('./pages/Login/Login'));
 const NotFound = React.lazy(() => import('./pages/NotFound/NotFound'));
 const PrivateRoute = React.lazy(() => import('./components/PrivateRoute'));
