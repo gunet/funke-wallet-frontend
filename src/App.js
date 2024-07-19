@@ -20,6 +20,8 @@ import SendCredentials from './pages/SendCredentials/SendCredentials';
 
 import { openID4VCIClientMap } from './lib/main';
 
+const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
+
 setTimeout(() => {
 	console.log(openID4VCIClientMap.keys())
 	if (openID4VCIClientMap.size == 0) {
@@ -34,7 +36,23 @@ setTimeout(() => {
 		cl.getAvailableCredentialConfigurations().then((confs) => {
 			const selectedConf = confs['pid-sd-jwt'];
 			cl.generateAuthorizationRequest(selectedConf).then(({ url, request_uri }) => {
-				console.log("request_uri = ", request_uri)
+				console.log("Request uri = ", request_uri)
+				const urlObj = new URL(url);
+				// Construct the base URL
+				const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+				
+				// Parameters
+				const clientId = "fed79862-af36-4fee-8e64-89e3c91091ed";
+				// Encode parameters
+				const encodedClientId = encodeURIComponent(clientId);
+				const encodedRequestUri = encodeURIComponent(request_uri);
+				const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
+				
+				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
+
+				console.log("new loc = ", newLoc)
+
+				// window.location.href = newLoc;
 			}).catch((err) => {
 				console.error("Couldn't generate authz req")
 			});
