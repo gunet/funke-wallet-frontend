@@ -19,22 +19,41 @@ import AddCredentials from './pages/AddCredentials/AddCredentials';
 import SendCredentials from './pages/SendCredentials/SendCredentials';
 
 import { openID4VCIClientMap } from './lib/main';
+import axios from 'axios';
+import container from './lib/DIContainer';
 
 const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
 
+const u = new URL(window.location.href);
+
 setTimeout(() => {
+	const httpClientService = container.resolve('HttpClient')
+
+
+
 	console.log(openID4VCIClientMap.keys())
 	if (openID4VCIClientMap.size == 0) {
 		return;
 	}
 
 	const cl = openID4VCIClientMap.get('fed79862-af36-4fee-8e64-89e3c91091ed');
-	cl.handleAuthorizationResponse(window.location.href).catch(() => {
+
+	if (u.searchParams.get('finishUrl')) {
+		console.log('FIN = ', u.searchParams.get('finishUrl'))
+		httpClientService.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
+			console.log('DPop nonce = ', resp.headers['dpop-nonce'])
+			console.log("Loc = ", resp.headers['location'])
+			cl.handleAuthorizationResponse(resp.headers['location'], resp.headers['dpop-nonce']).catch(err => null);
+		}).catch((err) => {})
+		return;
+	}
+
+	cl.handleAuthorizationResponse(window.location.href, "").catch(() => {
 		// if didnt handle
 
 		// then send authorization request
 		cl.getAvailableCredentialConfigurations().then((confs) => {
-			const selectedConf = confs['pid-sd-jwt'];
+			const selectedConf = confs['pid-sd-jwt'];  // pid-sd-jwt || pid-mso-mdoc
 			cl.generateAuthorizationRequest(selectedConf).then(({ url, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);

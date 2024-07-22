@@ -8,12 +8,11 @@ export class OpenID4VCIClientStateRepository implements IOpenID4VCIClientStateRe
 	
 	async store(s: OpenID4VCIClientState): Promise<void> {
 		const x = s.serialize();
-		/// store in index db
-		throw new Error("Not impl")
+		localStorage.setItem(this.key, x);
 	}
 
 	async retrieve(): Promise<OpenID4VCIClientState> {
-		throw new Error("Method not implemented.");
+		return OpenID4VCIClientState.deserialize(localStorage.getItem(this.key))
 	}
 
 }

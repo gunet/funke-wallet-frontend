@@ -26,11 +26,11 @@ export const parseCredential = async (credential: string | object): Promise<obje
 			return SdJwt.fromCompact<Record<string, unknown>, any>(credential)
 				.withHasher(hasherAndAlgorithm)
 				.getPrettyClaims()
-				.then((payload) => payload.vc);
+				.then((payload) => payload.vc ? payload.vc : payload)
 		}
 		else { // is plain JWT
 			return parseJwt(credential)
-				.then((payload) => payload.vc);
+				.then((payload) => payload.vc ? payload.vc : payload);
 		}
 	}
 	throw new Error("Type of credential is not supported")

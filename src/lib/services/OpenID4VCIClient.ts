@@ -4,6 +4,11 @@ import { ClientConfig } from '../types/ClientConfig';
 import pkce from 'pkce-challenge';
 import { IOpenID4VCIClientStateRepository } from '../interfaces/IOpenID4VCIClientStateRepository';
 import { CredentialConfigurationSupported } from '../schemas/CredentialConfigurationSupportedSchema';
+import { OpenID4VCIClientState } from '../types/OpenID4VCIClientState';
+import * as jose from 'jose';
+import { VerifiableCredentialFormat } from '../schemas/vc';
+import { generateDPoP } from '../utils/dpop';
+import { parseCredential } from '../../functions/parseCredential';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
 
@@ -27,6 +32,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported): Promise<{ url: string; request_uri: string; }> {
 		const { code_challenge, code_verifier } = await pkce();
+
 		const formData = new URLSearchParams();
 
 		formData.append("scope", selectedCredentialConfigurationSupported.scope);
@@ -44,20 +50,124 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			'Content-Type': 'application/x-www-form-urlencoded;charset=ISO-8859-1'
 		});
 
+		
 		const { request_uri, expires_in } = res.data;
 		const authorizationRequestURL = `${this.config.authorizationServerMetadata.authorization_endpoint}?request_uri=${request_uri}&client_id=${this.config.clientId}`
+
+		await this.openID4VCIClientStateRepository.store(new OpenID4VCIClientState(code_verifier, selectedCredentialConfigurationSupported));
+
 		return {
 			url: authorizationRequestURL,
 			request_uri,
 		}
 	}
 
-	async handleAuthorizationResponse(url: string) {
+	async handleAuthorizationResponse(url: string, dpopNonceHeader?: string) {
 		const parsedUrl = new URL(url);
 
 		const code = parsedUrl.searchParams.get('code');
+		console.log("DPOP nonce header = ", dpopNonceHeader)
 		if (!code) {
 			throw new Error("Could not handle authorization response");
 		}
+
+
+		// Token Request
+		const tokenEndpoint = this.config.authorizationServerMetadata.token_endpoint;
+
+		const { privateKey, publicKey } = await jose.generateKeyPair('ES256'); // keypair for dpop
+		const dpop = await generateDPoP(
+			privateKey,
+			publicKey,
+			"-BwC3ESc6acc2lTc",
+			"POST",
+			tokenEndpoint,
+			dpopNonceHeader
+		);
+
+		const flowState = await this.openID4VCIClientStateRepository.retrieve();
+
+		const formData = new URLSearchParams();
+		formData.append('grant_type', 'authorization_code');
+		formData.append('code', code);
+		formData.append('code_verifier', flowState.code_verifier);
+		formData.append('redirect_uri', redirectUri);
+
+		const response = await this.httpClient.post(tokenEndpoint, formData.toString(), {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'DPoP': dpop
+		});
+
+		console.log("Token response = ", response)
+
+		const {
+			data: { access_token, c_nonce, c_nonce_expires_in, expires_in, token_type },
+		} = response;
+
+
+		// Credential Request
+		const newDPoPNonce = response.headers['dpop-nonce'];
+		const credentialEndpoint = this.config.credentialIssuerMetadata.credential_endpoint;
+		const credentialEndpointDPoP = await generateDPoP(
+			privateKey,
+			publicKey,
+			"-BwC3ESc6acc2lTc",
+			"POST",
+			credentialEndpoint,
+			newDPoPNonce,
+			access_token
+		);
+
+		// TODO: USE wallet keys to sign this proof and not the dpop keypair
+		const proof = await new jose.SignJWT({
+				"iss": this.config.clientId,
+				"aud": this.config.credentialIssuerIdentifier,
+				"nonce": c_nonce
+			})
+			.setIssuedAt()
+			.setProtectedHeader({
+				"typ": "openid4vci-proof+jwt",
+				"alg": "ES256",
+				"jwk": await jose.exportJWK(publicKey)
+			})
+			.sign(privateKey);
+
+		const credentialEndpointBody = {
+			"proof": {
+				"proof_type": "jwt",
+				"jwt": proof,
+			},
+			"format": flowState.selectedCredentialConfiguration.format,
+		};
+
+		if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
+			credentialEndpointBody['vct'] = flowState.selectedCredentialConfiguration.vct;
+		}
+		else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
+			credentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
+		}
+
+		const credentialResponse = await this.httpClient.post(credentialEndpoint, credentialEndpointBody, { 
+			"Authorization": `DPoP ${access_token}`,
+			"dpop": credentialEndpointDPoP,
+		});
+		const { credential } = credentialResponse.data;
+		console.log("Credential = ", credential)
+
+		try {
+			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
+			const parsedCredential = await parseCredential(credential);
+			console.log("parsed cred")
+			console.log(parsedCredential)
+		}
+		catch(err) {
+			console.error("Failed to parse credential = ", err)
+		}
+
+
+		console.log("Credential response = ", credentialResponse);
 	}
 }
+
+
+
