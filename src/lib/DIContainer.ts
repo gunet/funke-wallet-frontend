@@ -1,6 +1,6 @@
 type Constructor<T> = new (...args: any[]) => T;
 
-class DIContainer {
+export class DIContainer {
 	private services = new Map<string, any>();
 
 	register<T>(name: string, service: Constructor<T>, ...args: any[]): void {
@@ -16,5 +16,3 @@ class DIContainer {
 	}
 }
 
-const container = new DIContainer();
-export default container;

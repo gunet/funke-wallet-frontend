@@ -9,8 +9,11 @@ import * as jose from 'jose';
 import { VerifiableCredentialFormat } from '../schemas/vc';
 import { generateDPoP } from '../utils/dpop';
 import { parseCredential } from '../../functions/parseCredential';
+import axios from 'axios';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
+// @ts-ignore
+const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
 export class OpenID4VCIClient implements IOpenID4VCIClient {
 	private config: ClientConfig;
@@ -23,6 +26,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		this.openID4VCIClientStateRepository = openID4VCIClientStateRepository;
 	}
 
+
 	async getAvailableCredentialConfigurations(): Promise<Record<string, CredentialConfigurationSupported>> {
 		if (!this?.config?.credentialIssuerMetadata?.credential_configurations_supported) {
 			throw new Error("Credential configuration supported not found")
@@ -30,7 +34,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		return this.config.credentialIssuerMetadata.credential_configurations_supported
 	}
 
-	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported): Promise<{ url: string; request_uri: string; }> {
+	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported): Promise<{ url: string; client_id: string; request_uri: string; }> {
 		const { code_challenge, code_verifier } = await pkce();
 
 		const formData = new URLSearchParams();
@@ -59,6 +63,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		return {
 			url: authorizationRequestURL,
 			request_uri,
+			client_id: this.config.clientId,
 		}
 	}
 
@@ -161,7 +166,18 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			console.log(parsedCredential)
 		}
 		catch(err) {
-			console.error("Failed to parse credential = ", err)
+			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
+				const response = await axios.post(walletBackendServerUrl + '/utils/mdl/parse', {
+					credential,
+					doc_type: flowState.selectedCredentialConfiguration.doctype
+				}, {
+					headers: {
+						Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('appToken'))}`
+					}
+				});
+				console.log("MDL parsing = ", response.data.namespace)
+			}
+
 		}
 
 

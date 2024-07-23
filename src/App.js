@@ -19,70 +19,21 @@ import AddCredentials from './pages/AddCredentials/AddCredentials';
 import SendCredentials from './pages/SendCredentials/SendCredentials';
 
 import { openID4VCIClientMap } from './lib/main';
-import axios from 'axios';
-import container from './lib/DIContainer';
+import { container } from './lib/main';
 
-const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
 
 const u = new URL(window.location.href);
+if (u.searchParams.get('finishUrl')) {
+	container.resolve('HttpClient').get(u.searchParams.get('finishUrl'), { }).then((resp) => {
+		console.log('DPop nonce = ', resp.headers['dpop-nonce'])
+		console.log("Loc = ", resp.headers['location'])
+		for (const [k, client] of openID4VCIClientMap) {
+			client.handleAuthorizationResponse(resp.headers['location'], resp.headers['dpop-nonce'])
+				.catch(err => null);
+		}
+	}).catch((err) => {})
 
-setTimeout(() => {
-	const httpClientService = container.resolve('HttpClient')
-
-
-
-	console.log(openID4VCIClientMap.keys())
-	if (openID4VCIClientMap.size == 0) {
-		return;
-	}
-
-	const cl = openID4VCIClientMap.get('fed79862-af36-4fee-8e64-89e3c91091ed');
-
-	if (u.searchParams.get('finishUrl')) {
-		console.log('FIN = ', u.searchParams.get('finishUrl'))
-		httpClientService.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
-			console.log('DPop nonce = ', resp.headers['dpop-nonce'])
-			console.log("Loc = ", resp.headers['location'])
-			cl.handleAuthorizationResponse(resp.headers['location'], resp.headers['dpop-nonce']).catch(err => null);
-		}).catch((err) => {})
-		return;
-	}
-
-	cl.handleAuthorizationResponse(window.location.href, "").catch(() => {
-		// if didnt handle
-
-		// then send authorization request
-		cl.getAvailableCredentialConfigurations().then((confs) => {
-			const selectedConf = confs['pid-sd-jwt'];  // pid-sd-jwt || pid-mso-mdoc
-			cl.generateAuthorizationRequest(selectedConf).then(({ url, request_uri }) => {
-				console.log("Request uri = ", request_uri)
-				const urlObj = new URL(url);
-				// Construct the base URL
-				const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
-				
-				// Parameters
-				const clientId = "fed79862-af36-4fee-8e64-89e3c91091ed";
-				// Encode parameters
-				const encodedClientId = encodeURIComponent(clientId);
-				const encodedRequestUri = encodeURIComponent(request_uri);
-				const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
-				
-				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
-
-				console.log("new loc = ", newLoc)
-
-				// window.location.href = newLoc;
-			}).catch((err) => {
-				console.error("Couldn't generate authz req")
-			});
-		}).catch((err) => {
-			console.error(err)
-		})
-	})
-
-
-	
-}, 2000)
+}
 
 const Login = React.lazy(() => import('./pages/Login/Login'));
 const NotFound = React.lazy(() => import('./pages/NotFound/NotFound'));

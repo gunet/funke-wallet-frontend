@@ -10,7 +10,7 @@ const proofTypesSupportedSchema = z.object({
 const commonSchema = z.object({
   scope: z.string(),
   cryptographic_binding_methods_supported: z.array(z.string().nonempty()),
-  cryptographic_signing_alg_values_supported: z.array(z.string().nonempty()),
+  credential_signing_alg_values_supported: z.array(z.string().nonempty()),
   proof_types_supported: proofTypesSupportedSchema,
 });
 

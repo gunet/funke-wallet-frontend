@@ -1,5 +1,6 @@
+import { VerifiableCredentialFormat } from "../schemas/vc";
 
 export interface ICredentialRepository {
-	store(credential: object): Promise<void>;
-	retrieve(): Promise<object>;
+	store(format: VerifiableCredentialFormat, credential: object, vct?: string, doc_type?: string): Promise<void>;
+	retrieveAll(): Promise<object[]>;
 }
