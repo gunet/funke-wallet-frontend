@@ -10,6 +10,7 @@ import { VerifiableCredentialFormat } from '../schemas/vc';
 import { generateDPoP } from '../utils/dpop';
 import { parseCredential } from '../../functions/parseCredential';
 import axios from 'axios';
+import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
 // @ts-ignore
@@ -26,6 +27,21 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		this.openID4VCIClientStateRepository = openID4VCIClientStateRepository;
 	}
 
+
+	async handleCredentialOffer(credentialOfferURL: string): Promise<{ url: string; client_id: string; request_uri: string; }> {
+		const parsedUrl = new URL(credentialOfferURL);
+		const offer =  CredentialOfferSchema.parse(JSON.parse(parsedUrl.searchParams.get("credential_offer")));
+		
+		if (!offer.grants.authorization_code) {
+			throw new Error("Only authorization_code grant is supported");
+		}
+		const selectedConfigurationId = offer.credential_configuration_ids[0];
+		const selectedConfiguration = this.config.credentialIssuerMetadata.credential_configurations_supported[selectedConfigurationId];
+		if (!selectedConfiguration) {
+			throw new Error("Credential configuration not found");
+		}
+		return this.generateAuthorizationRequest(selectedConfiguration);
+	}
 
 	async getAvailableCredentialConfigurations(): Promise<Record<string, CredentialConfigurationSupported>> {
 		if (!this?.config?.credentialIssuerMetadata?.credential_configurations_supported) {
