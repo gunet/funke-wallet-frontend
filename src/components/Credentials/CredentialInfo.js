@@ -6,6 +6,7 @@ import { MdTitle, MdGrade, MdOutlineNumbers } from 'react-icons/md';
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
 import { parseCredential } from '../../functions/parseCredential';
+import { useCommunicationProtocols } from '../useCommunicationProtocols';
 
 const getFieldIcon = (fieldName) => {
 	switch (fieldName) {
@@ -51,6 +52,7 @@ const renderRow = (fieldName, label, fieldValue) => {
 
 const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:text-base pt-5 pr-2 w-full" }) => {
 
+	const { } = useCommunicationProtocols()
 	const [parsedCredential, setParsedCredential] = useState(null);
 
 	useEffect(() => {
@@ -71,15 +73,21 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 				<tbody className="divide-y-4 divide-transparent">
 					{parsedCredential && (
 						<>
-							{renderRow('expdate', 'Expiration', formatDate(parsedCredential.expirationDate))}
-							{renderRow('familyName', 'Family Name', parsedCredential.credentialSubject.familyName)}
-							{renderRow('firstName', 'First Name', parsedCredential.credentialSubject.firstName)}
-							{renderRow('id', 'Personal ID', parsedCredential.credentialSubject.personalIdentifier)}
-							{renderRow('dateOfBirth', 'Birthday', parsedCredential.credentialSubject.dateOfBirth)}
-							{renderRow('dateOfBirth', 'Birthday', parsedCredential.credentialSubject.birthdate)}
-							{renderRow('diplomaTitle', 'Title', parsedCredential.credentialSubject.diplomaTitle)}
-							{renderRow('eqfLevel', 'EQF', parsedCredential.credentialSubject.eqfLevel)}
-							{renderRow('grade', 'Grade', parsedCredential.credentialSubject.grade)}
+							{renderRow('expdate', 'Expiration', formatDate(parsedCredential?.expirationDate))}
+							{renderRow('familyName', 'Family Name', parsedCredential?.credentialSubject?.familyName)}
+							{renderRow('firstName', 'First Name', parsedCredential?.credentialSubject?.firstName)}
+							{renderRow('id', 'Personal ID', parsedCredential?.credentialSubject?.personalIdentifier)}
+							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.credentialSubject?.dateOfBirth)}
+							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.credentialSubject?.birthdate)}
+							{renderRow('diplomaTitle', 'Title', parsedCredential?.credentialSubject?.diplomaTitle)}
+							{renderRow('eqfLevel', 'EQF', parsedCredential?.credentialSubject?.eqfLevel)}
+							{renderRow('grade', 'Grade', parsedCredential?.credentialSubject?.grade)}
+							{renderRow('grade', 'Grade', parsedCredential?.credentialSubject?.grade)}
+
+
+							{renderRow('grade', 'Grade', parsedCredential?.credentialSubject?.grade)}
+
+
 						</>
 					)}
 				</tbody>

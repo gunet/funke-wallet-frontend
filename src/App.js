@@ -18,22 +18,6 @@ import Settings from './pages/Settings/Settings';
 import AddCredentials from './pages/AddCredentials/AddCredentials';
 import SendCredentials from './pages/SendCredentials/SendCredentials';
 
-import { openID4VCIClientMap } from './lib/main';
-import { container } from './lib/main';
-
-
-const u = new URL(window.location.href);
-if (u.searchParams.get('finishUrl')) {
-	container.resolve('HttpClient').get(u.searchParams.get('finishUrl'), { }).then((resp) => {
-		console.log('DPop nonce = ', resp.headers['dpop-nonce'])
-		console.log("Loc = ", resp.headers['location'])
-		for (const [k, client] of openID4VCIClientMap) {
-			client.handleAuthorizationResponse(resp.headers['location'], resp.headers['dpop-nonce'])
-				.catch(err => null);
-		}
-	}).catch((err) => {})
-
-}
 
 const Login = React.lazy(() => import('./pages/Login/Login'));
 const NotFound = React.lazy(() => import('./pages/NotFound/NotFound'));

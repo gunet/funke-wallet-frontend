@@ -17,7 +17,7 @@ export async function generateDPoP(privateKey: KeyLike, publicKey: KeyLike, jti:
     .sign(privateKey);
 }
 
-async function calculateAth(accessToken: string) {
+export async function calculateAth(accessToken: string) {
     // Encode the access token as a Uint8Array
     const encoder = new TextEncoder();
     const accessTokenBuffer = encoder.encode(accessToken);

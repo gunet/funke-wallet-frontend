@@ -592,21 +592,21 @@ export async function signJwtPresentation([privateData, sessionKey]: [PrivateDat
 	return { vpjwt: jws };
 }
 
-export async function generateOpenid4vciProof([privateData, sessionKey]: [PrivateData, CryptoKey], nonce: string, audience: string): Promise<{ proof_jwt: string }> {
-	const { alg, did, wrappedPrivateKey } = privateData;
+export async function generateOpenid4vciProof([privateData, sessionKey]: [PrivateData, CryptoKey], cNonce: string, audience: string, clientId: string): Promise<{ proof_jwt: string }> {
+	const { alg, wrappedPrivateKey, publicKey } = privateData;
 	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, sessionKey);
-	const header = {
-		alg,
-		typ: "openid4vci-proof+jwt",
-		kid: did + "#" + did.split(":")[2]
-	};
 
-	const jws = await new SignJWT({ nonce: nonce })
-		.setProtectedHeader(header)
+	const proof = await new jose.SignJWT({
+			"iss": clientId,
+			"aud": audience,
+			"nonce": cNonce
+		})
 		.setIssuedAt()
-		.setIssuer(did)
-		.setAudience(audience)
-		.setExpirationTime('1m')
+		.setProtectedHeader({
+			"typ": "openid4vci-proof+jwt",
+			"alg": alg,
+			"jwk": publicKey
+		})
 		.sign(privateKey);
-	return { proof_jwt: jws };
+	return { proof_jwt: proof };
 }

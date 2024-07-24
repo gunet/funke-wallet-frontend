@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { IHttpClient } from '../interfaces/IHttpClient';
+import { IHttpProxy } from '../interfaces/IHttpProxy';
 
 // @ts-ignore
 const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
-export class HttpClient implements IHttpClient {
+export class HttpProxy implements IHttpProxy {
 	async get(url: string, headers: any): Promise<any> {
 		const response = await axios.post(`${walletBackendServerUrl}/proxy`, {
 			headers: headers,

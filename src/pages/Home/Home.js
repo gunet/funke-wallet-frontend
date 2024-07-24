@@ -136,7 +136,7 @@ const Home = () => {
 													tabindex={(currentSlide != index + 1) && -1}
 													title={t('pageCredentials.credentialFullScreenTitle', { friendlyName: vcEntity.friendlyName })}
 												>
-													<CredentialImage credential={vcEntity.credential} className={`w-full h-full object-cover rounded-xl ${latestCredentials.has(vcEntity.id) ? 'highlight-filter' : ''}`} />
+													<CredentialImage credential={{...vcEntity}} className={`w-full h-full object-cover rounded-xl ${latestCredentials.has(vcEntity.id) ? 'highlight-filter' : ''}`} />
 												</button>
 												<div className={`transition-all ease-in-out duration-500 ${(currentSlide === index + 1) ? 'max-h-auto opacity-100' : 'hidden max-h-0 opacity-0'}`}>
 													<div className="flex items-center justify-end">
@@ -160,9 +160,9 @@ const Home = () => {
 															<BiRightArrow size={22} />
 														</button>
 													</div>
-													<CredentialInfo credential={vcEntity.credential} />
+													<CredentialInfo credential={{...vcEntity}} />
 													<CredentialDeleteButton onDelete={() => { setShowDeletePopup(true); setSelectedVcEntity(vcEntity); }} />
-													<CredentialJson credential={vcEntity.credential} />
+													<CredentialJson credential={{...vcEntity}} />
 												</div>
 											</div>
 										))}
@@ -177,10 +177,10 @@ const Home = () => {
 									key={vcEntity.id}
 									className={`relative rounded-xl overflow-hidden transition-shadow shadow-md hover:shadow-lg cursor-pointer ${latestCredentials.has(vcEntity.id) ? 'highlight-border fade-in' : ''}`}
 									onClick={() => handleImageClick(vcEntity)}
-									aria-label={`${vcEntity.friendlyName}`}
-									title={t('pageCredentials.credentialDetailsTitle', { friendlyName: vcEntity.friendlyName })}
+									aria-label={`${vcEntity?.friendlyName ?? "Credential" }`}
+									title={t('pageCredentials.credentialDetailsTitle', { friendlyName: vcEntity?.friendlyName ?? "Credential" })}
 								>
-									<CredentialImage credential={vcEntity.credential} className={`w-full h-full object-cover rounded-xl ${latestCredentials.has(vcEntity.id) ? 'highlight-filter' : ''}`} />
+									<CredentialImage credential={{...vcEntity}} className={`w-full h-full object-cover rounded-xl ${latestCredentials.has(vcEntity.id) ? 'highlight-filter' : ''}`} />
 								</button>
 							))}
 							<button
@@ -206,7 +206,7 @@ const Home = () => {
 					isOpen={showFullscreenImgPopup}
 					onClose={() => setShowFullscreenImgPopup(false)}
 					content={
-						<CredentialImage credential={selectedVcEntity.credential} className={"max-w-full max-h-full rounded-xl"} showRibbon={false} />
+						<CredentialImage credential={{...selectedVcEntity}} className={"max-w-full max-h-full rounded-xl"} showRibbon={false} />
 					}
 				/>
 			)}

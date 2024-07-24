@@ -1,5 +1,5 @@
 import { IOpenID4VCIClient } from '../interfaces/IOpenID4VCIClient';
-import { IHttpClient } from '../interfaces/IHttpClient';
+import { IHttpProxy } from '../interfaces/IHttpProxy';
 import { ClientConfig } from '../types/ClientConfig';
 import pkce from 'pkce-challenge';
 import { IOpenID4VCIClientStateRepository } from '../interfaces/IOpenID4VCIClientStateRepository';
@@ -8,9 +8,9 @@ import { OpenID4VCIClientState } from '../types/OpenID4VCIClientState';
 import * as jose from 'jose';
 import { VerifiableCredentialFormat } from '../schemas/vc';
 import { generateDPoP } from '../utils/dpop';
-import { parseCredential } from '../../functions/parseCredential';
 import axios from 'axios';
 import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
+import { StorableCredential } from '../types/StorableCredential';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
 // @ts-ignore
@@ -18,13 +18,23 @@ const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
 export class OpenID4VCIClient implements IOpenID4VCIClient {
 	private config: ClientConfig;
-	private httpClient: IHttpClient;
+	private httpProxy: IHttpProxy;
 	private openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository;
 
-	constructor(config: ClientConfig, httpClient: IHttpClient, openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository) {
+	private generateNonceProof: (cNonce: string, audience: string, clientId: string) => Promise<{ jws: string }>;
+	private storeCredential: (c: StorableCredential) => Promise<void>;
+
+	constructor(config: ClientConfig,
+		httpProxy: IHttpProxy,
+		openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository,
+		generateNonceProof: (cNonce: string, audience: string, clientId: string) => Promise<{ jws: string }>,
+		storeCredential: (c: StorableCredential) => Promise<void>) {
+
 		this.config = config;
-		this.httpClient = httpClient;
+		this.httpProxy = httpProxy;
 		this.openID4VCIClientStateRepository = openID4VCIClientStateRepository;
+		this.generateNonceProof = generateNonceProof;
+		this.storeCredential = storeCredential;
 	}
 
 
@@ -66,7 +76,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 		formData.append("redirect_uri", redirectUri);
 
-		const res = await this.httpClient.post(this.config.authorizationServerMetadata.pushed_authorization_request_endpoint, formData.toString(), {
+		const res = await this.httpProxy.post(this.config.authorizationServerMetadata.pushed_authorization_request_endpoint, formData.toString(), {
 			'Content-Type': 'application/x-www-form-urlencoded;charset=ISO-8859-1'
 		});
 
@@ -114,7 +124,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		formData.append('code_verifier', flowState.code_verifier);
 		formData.append('redirect_uri', redirectUri);
 
-		const response = await this.httpClient.post(tokenEndpoint, formData.toString(), {
+		const response = await this.httpProxy.post(tokenEndpoint, formData.toString(), {
 			'Content-Type': 'application/x-www-form-urlencoded',
 			'DPoP': dpop
 		});
@@ -139,24 +149,11 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			access_token
 		);
 
-		// TODO: USE wallet keys to sign this proof and not the dpop keypair
-		const proof = await new jose.SignJWT({
-				"iss": this.config.clientId,
-				"aud": this.config.credentialIssuerIdentifier,
-				"nonce": c_nonce
-			})
-			.setIssuedAt()
-			.setProtectedHeader({
-				"typ": "openid4vci-proof+jwt",
-				"alg": "ES256",
-				"jwk": await jose.exportJWK(publicKey)
-			})
-			.sign(privateKey);
-
+		const { jws } = await this.generateNonceProof(c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
 		const credentialEndpointBody = {
 			"proof": {
 				"proof_type": "jwt",
-				"jwt": proof,
+				"jwt": jws,
 			},
 			"format": flowState.selectedCredentialConfiguration.format,
 		};
@@ -168,36 +165,33 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			credentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
 		}
 
-		const credentialResponse = await this.httpClient.post(credentialEndpoint, credentialEndpointBody, { 
+		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, { 
 			"Authorization": `DPoP ${access_token}`,
 			"dpop": credentialEndpointDPoP,
 		});
 		const { credential } = credentialResponse.data;
-		console.log("Credential = ", credential)
 
 		try {
 			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
-			const parsedCredential = await parseCredential(credential);
-			console.log("parsed cred")
-			console.log(parsedCredential)
+			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
+				await this.storeCredential({
+					credential: credential,
+					format: flowState.selectedCredentialConfiguration.format,
+					vct: flowState.selectedCredentialConfiguration.vct, 
+				});
+			}
+			else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
+				await this.storeCredential({
+					credential: credential,
+					format: flowState.selectedCredentialConfiguration.format,
+					doctype: flowState.selectedCredentialConfiguration.doctype, 
+				});
+			}
 		}
 		catch(err) {
-			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
-				const response = await axios.post(walletBackendServerUrl + '/utils/mdl/parse', {
-					credential,
-					doc_type: flowState.selectedCredentialConfiguration.doctype
-				}, {
-					headers: {
-						Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('appToken'))}`
-					}
-				});
-				console.log("MDL parsing = ", response.data.namespace)
-			}
-
+			console.error("Failed to recieve credential during issuance protocol");
+			console.error(err);
 		}
-
-
-		console.log("Credential response = ", credentialResponse);
 	}
 }
 

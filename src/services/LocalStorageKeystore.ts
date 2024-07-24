@@ -60,7 +60,7 @@ export interface LocalStorageKeystore {
 
 	createIdToken(nonce: string, audience: string): Promise<{ id_token: string; }>,
 	signJwtPresentation(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }>,
-	generateOpenid4vciProof(nonce: string, audience: string): Promise<{ proof_jwt: string }>,
+	generateOpenid4vciProof(c_nonce: string, audience: string, clientId: string): Promise<{ proof_jwt: string }>,
 }
 
 /** A stateful wrapper around the keystore module, storing state in the browser's localStorage and sessionStorage. */
@@ -288,8 +288,8 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 					await keystore.signJwtPresentation(await openPrivateData(), nonce, audience, verifiableCredentials)
 				),
 
-				generateOpenid4vciProof: async (nonce: string, audience: string): Promise<{ proof_jwt: string }> => (
-					await keystore.generateOpenid4vciProof(await openPrivateData(), nonce, audience)
+				generateOpenid4vciProof: async (cNonce: string, audience: string, clientId: string): Promise<{ proof_jwt: string }> => (
+					await keystore.generateOpenid4vciProof(await openPrivateData(), cNonce, audience, clientId)
 				),
 			};
 		},

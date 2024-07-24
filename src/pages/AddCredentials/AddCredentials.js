@@ -6,7 +6,7 @@ import RedirectPopup from '../../components/Popups/RedirectPopup';
 import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
 import { base64url } from 'jose';
-import { container, openID4VCIClientMap } from '../../lib/main';
+import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
 
 function highlightBestSequence(issuer, search) {
 	if (typeof issuer !== 'string' || typeof search !== 'string') {
@@ -23,9 +23,10 @@ function highlightBestSequence(issuer, search) {
 
 const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
 const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
-const helper = container.resolve('OpenID4VCIHelper');
 
 const Issuers = () => {
+	const { openID4VCIClients, httpProxy, openID4VCIHelper } = useCommunicationProtocols();
+
 	const api = useApi();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [issuers, setIssuers] = useState([]);
@@ -42,7 +43,7 @@ const Issuers = () => {
 
 	async function getAllCredentialIssuerMetadata() {
 		return Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
-			const { metadata } = await helper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier);
+			const { metadata } = await openID4VCIHelper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier);
 			return {
 				credentialIssuerIdentifier: credentialIssuer.credential_issuer_identifier,
 				selectedDisplay: metadata.display.filter((display) => display.locale === 'en-US')[0]
@@ -92,7 +93,7 @@ const Issuers = () => {
 
 	useEffect(() => {
 		const filtered = issuers.filter((issuer) => {
-			const friendlyName = issuer.friendlyName.toLowerCase();
+			const friendlyName = issuer.selectedDisplay.name.toLowerCase();
 			const query = searchQuery.toLowerCase();
 			return friendlyName.includes(query);
 		});
@@ -103,7 +104,10 @@ const Issuers = () => {
 	const handleIssuerClick = async (credentialIssuerIdentifier) => {
 		const clickedIssuer = credentialIssuers.find((issuer) => issuer.credentialIssuerIdentifier === credentialIssuerIdentifier);
 		if (clickedIssuer) {
-			const cl = openID4VCIClientMap.get(credentialIssuerIdentifier);
+			const cl = openID4VCIClients[credentialIssuerIdentifier];
+			if (!cl) {
+				return;
+			}
 			const confs = await cl.getAvailableCredentialConfigurations();
 			setAvailableCredentialConfigurations(confs);
 			setSelectedIssuer(clickedIssuer);
@@ -121,7 +125,7 @@ const Issuers = () => {
 
 		console.log("Seelected issuer = ", selectedIssuer)
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
-			const cl = openID4VCIClientMap.get(selectedIssuer.credentialIssuerIdentifier);
+			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
 			cl.generateAuthorizationRequest(selectedConfiguration).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
