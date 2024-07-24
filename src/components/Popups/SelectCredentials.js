@@ -82,7 +82,7 @@ function SelectCredentials({ showPopup, setShowPopup, setSelectionMap, conforman
 				const response = await api.get('/storage/vc');
 				const vcEntities = await Promise.all(
 					response.data.vc_list.map(async vcEntity => {
-						const name = await extractCredentialFriendlyName(vcEntity.credential);
+						const name = await extractCredentialFriendlyName(vcEntity);
 						return { ...vcEntity, friendlyName: name };
 					})
 				);

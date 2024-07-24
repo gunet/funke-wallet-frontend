@@ -2,6 +2,7 @@ import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { useApi } from '../api';
 import { useLocalStorageKeystore } from '../services/LocalStorageKeystore';
 import { useTranslation } from 'react-i18next';
+import { useCommunicationProtocols } from './useCommunicationProtocols';
 
 export enum HandleOutboundRequestError {
 	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
@@ -26,6 +27,7 @@ function useCheckURL(urlToCheck: string): {
 	typeMessagePopup: string;
 } {
 	const api = useApi();
+	const { openID4VCIClients, httpProxy } = useCommunicationProtocols();
 	const isLoggedIn: boolean = api.isLoggedIn();
 	const [showSelectCredentialsPopup, setShowSelectCredentialsPopup] = useState<boolean>(false);
 	const [showPinInputPopup, setShowPinInputPopup] = useState<boolean>(false);
@@ -86,13 +88,26 @@ function useCheckURL(urlToCheck: string): {
 			}
 		}
 
+		const u = new URL(urlToCheck);
+		if (Object.keys(openID4VCIClients).length && u.searchParams.get('finishUrl')) {
+			httpProxy.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
+				for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
+					openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(resp.headers['location'], resp.headers['dpop-nonce'])
+						.catch(err => {
+							console.error(err)
+						});
+				}
+			}).catch((err) => {
+				console.error(err)
+			})
+		}
 		if (urlToCheck && isLoggedIn && window.location.pathname === "/cb") {
 			(async () => {
 				await communicationHandler(urlToCheck);
 			})();
 		}
 
-	}, [api, keystore, urlToCheck, isLoggedIn]);
+	}, [api, keystore, urlToCheck, isLoggedIn, openID4VCIClients]);
 
 	useEffect(() => {
 		if (selectionMap) {

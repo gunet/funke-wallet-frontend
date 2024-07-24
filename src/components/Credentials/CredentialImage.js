@@ -16,7 +16,7 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 		<>
 			{parsedCredential && (
 				<>
-					<img src={parsedCredential.credentialBranding.image.url} alt={"Credential"} className={className} onClick={onClick} />
+					<img src={parsedCredential?.credentialBranding?.image?.url ?? "https://vid-issuer.ediplomas.gr/images/vidCard.png"} alt={"Credential"} className={className} onClick={onClick} />
 					{showRibbon &&
 						<StatusRibbon credential={credential} />
 					}
