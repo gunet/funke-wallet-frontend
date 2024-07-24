@@ -1,19 +1,21 @@
-name: Build Docker image
+name: Push Docker image
 on:
   push:
-    branches-ignore:
-      - master
-  pull_request:
+    branches:
+      - funke
+
 
 jobs:
-  build-front:
+  build:
+
+    # Permissions for GITHUB_TOKEN
     permissions:
-      contents: read
-      packages: read
+      contents: read  # To check out repo
+      packages: write # To read NPM registry and push Docker image
 
     uses: gunet/funke-wallet-ecosystem/.github/workflows/docker-build-push.yml@master
     secrets: inherit
     with:
       image-tag: ghcr.io/gunet/funke-wallet-frontend:latest
-      docker-push: false
+      docker-push: true
       dockerfile-path: ./Dockerfile
