@@ -36,7 +36,7 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 			.getPrettyClaims()
 			.then((payload) => payload.vc ? payload.vc : payload)
 	}
-	
+
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
 		const response = await axios.post(walletBackendServerUrl + '/utils/mdl/parse', {
 			credential: credential.credential,
@@ -48,8 +48,8 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 		});
 		return response.data.namespace;
 	}
-	
-	if (credential.format == VerifiableCredentialFormat.VC_JWT){ // is plain JWT
+
+	if (credential.format == VerifiableCredentialFormat.VC_JWT) { // is plain JWT
 		return parseJwt(credential.credential)
 			.then((payload) => payload.vc ? payload.vc : payload);
 	}

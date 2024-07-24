@@ -6,11 +6,11 @@ import { OpenidCredentialIssuerMetadata, OpenidCredentialIssuerMetadataSchema } 
 
 export class OpenID4VCIHelper implements IOpenID4VCIHelper {
 
-    private httpProxy: IHttpProxy;
-    constructor(httpProxy: IHttpProxy) {
-        this.httpProxy = httpProxy;
-    }
-    async getAuthorizationServerMetadata(credentialIssuerIdentifier: string): Promise<{ authzServeMetadata: OpenidAuthorizationServerMetadata }> {
+	private httpProxy: IHttpProxy;
+	constructor(httpProxy: IHttpProxy) {
+		this.httpProxy = httpProxy;
+	}
+	async getAuthorizationServerMetadata(credentialIssuerIdentifier: string): Promise<{ authzServeMetadata: OpenidAuthorizationServerMetadata }> {
 		const response = await this.httpProxy.get(`${credentialIssuerIdentifier}/.well-known/oauth-authorization-server`, {});
 		const authzServeMetadata = OpenidAuthorizationServerMetadataSchema.parse(response.data);
 		return { authzServeMetadata };

@@ -61,7 +61,7 @@ const Issuers = () => {
 		getAllCredentialIssuerMetadata().then((issuers) => {
 			setCredentialIssuers(issuers);
 		});
-	
+
 		return () => {
 			window.removeEventListener('resize', handleResize);
 		};
@@ -132,13 +132,13 @@ const Issuers = () => {
 				const urlObj = new URL(url);
 				// Construct the base URL
 				const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
-				
+
 				// Parameters
 				// Encode parameters
 				const encodedClientId = encodeURIComponent(client_id);
 				const encodedRequestUri = encodeURIComponent(request_uri);
 				const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
-				
+
 				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
 
 				console.log("new loc = ", newLoc)

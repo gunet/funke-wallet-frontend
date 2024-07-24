@@ -25,7 +25,7 @@ export function useCommunicationProtocols() {
 	const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
 	const container = new DIContainer();
 	// Register services
-	
+
 	container.register<IHttpProxy>('HttpProxy', HttpProxy);
 	container.register<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository', OpenID4VCIClientStateRepository);
 	container.register<IOpenID4VCIHelper>('OpenID4VCIHelper', OpenID4VCIHelper, container.resolve<IHttpProxy>('HttpProxy'));
@@ -72,17 +72,17 @@ export function useCommunicationProtocols() {
 		return { open4VCIClientsJson };
 	}
 
-    useEffect(() => {
+	useEffect(() => {
 		initialize().then(({ open4VCIClientsJson }) => {
 			setOpenID4VCIClients(open4VCIClientsJson);
 		});
 	}, [])
 
-    return useMemo(() => {
-        return {
-            openID4VCIClients: openID4VCIClients,
-            openID4VCIHelper: helper,
-            httpProxy: httpProxy
-        }
-    }, [openID4VCIClients]);
+	return useMemo(() => {
+		return {
+			openID4VCIClients: openID4VCIClients,
+			openID4VCIHelper: helper,
+			httpProxy: httpProxy
+		}
+	}, [openID4VCIClients]);
 }

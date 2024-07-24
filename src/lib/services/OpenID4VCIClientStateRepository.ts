@@ -3,9 +3,9 @@ import { OpenID4VCIClientState } from "../types/OpenID4VCIClientState";
 
 
 export class OpenID4VCIClientStateRepository implements IOpenID4VCIClientStateRepository {
-	
+
 	private key = "openid4vci_client_state";
-	
+
 	async store(s: OpenID4VCIClientState): Promise<void> {
 		const x = s.serialize();
 		localStorage.setItem(this.key, x);

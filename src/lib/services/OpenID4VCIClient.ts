@@ -40,8 +40,8 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 	async handleCredentialOffer(credentialOfferURL: string): Promise<{ url: string; client_id: string; request_uri: string; }> {
 		const parsedUrl = new URL(credentialOfferURL);
-		const offer =  CredentialOfferSchema.parse(JSON.parse(parsedUrl.searchParams.get("credential_offer")));
-		
+		const offer = CredentialOfferSchema.parse(JSON.parse(parsedUrl.searchParams.get("credential_offer")));
+
 		if (!offer.grants.authorization_code) {
 			throw new Error("Only authorization_code grant is supported");
 		}
@@ -71,7 +71,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 		formData.append("client_id", this.config.clientId);
 		formData.append("code_challenge", code_challenge);
-		
+
 		formData.append("code_challenge_method", "S256");
 
 		formData.append("redirect_uri", redirectUri);
@@ -80,7 +80,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			'Content-Type': 'application/x-www-form-urlencoded;charset=ISO-8859-1'
 		});
 
-		
+
 		const { request_uri, expires_in } = res.data;
 		const authorizationRequestURL = `${this.config.authorizationServerMetadata.authorization_endpoint}?request_uri=${request_uri}&client_id=${this.config.clientId}`
 
@@ -165,7 +165,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			credentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
 		}
 
-		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, { 
+		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
 			"Authorization": `DPoP ${access_token}`,
 			"dpop": credentialEndpointDPoP,
 		});
@@ -177,23 +177,20 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 				await this.storeCredential({
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
-					vct: flowState.selectedCredentialConfiguration.vct, 
+					vct: flowState.selectedCredentialConfiguration.vct,
 				});
 			}
 			else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
 				await this.storeCredential({
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
-					doctype: flowState.selectedCredentialConfiguration.doctype, 
+					doctype: flowState.selectedCredentialConfiguration.doctype,
 				});
 			}
 		}
-		catch(err) {
+		catch (err) {
 			console.error("Failed to recieve credential during issuance protocol");
 			console.error(err);
 		}
 	}
 }
-
-
-

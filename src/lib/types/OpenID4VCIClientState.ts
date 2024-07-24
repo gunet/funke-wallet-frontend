@@ -4,7 +4,7 @@ import { CredentialConfigurationSupported } from "../schemas/CredentialConfigura
  * serializable
  */
 export class OpenID4VCIClientState {
-	
+
 	constructor(
 		public code_verifier: string,
 		public selectedCredentialConfiguration: CredentialConfigurationSupported) { }
