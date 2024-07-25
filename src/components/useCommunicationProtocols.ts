@@ -50,11 +50,14 @@ export function useCommunicationProtocols() {
 	async function initialize() {
 		let open4VCIClientsJson: { [x: string]: IOpenID4VCIClient } = {};
 
-		const clientConfigs: ClientConfig[] = await Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
+		let clientConfigs: ClientConfig[] = await Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
 			const [authorizationServerMetadata, credentialIssuerMetadata] = await Promise.all([
-				helper.getAuthorizationServerMetadata(credentialIssuer.credential_issuer_identifier),
-				helper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier),
+				helper.getAuthorizationServerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
+				helper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
 			]);
+			if (!authorizationServerMetadata || !credentialIssuerMetadata) {
+				return null;
+			}
 			return {
 				clientId: credentialIssuer.client_id,
 				credentialIssuerIdentifier: credentialIssuer.credential_issuer_identifier,
@@ -62,6 +65,11 @@ export function useCommunicationProtocols() {
 				authorizationServerMetadata: authorizationServerMetadata.authzServeMetadata,
 			}
 		}));
+		
+		clientConfigs = clientConfigs.filter((conf) => conf != null);
+
+
+		console.log("Client configs = ", clientConfigs)
 		const openID4VCIClientFactory = container.resolve<OpenID4VCIClientFactory>('OpenID4VCIClientFactory');
 
 		for (const config of clientConfigs) {

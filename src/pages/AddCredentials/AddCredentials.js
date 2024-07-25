@@ -23,6 +23,7 @@ function highlightBestSequence(issuer, search) {
 
 const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
 const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
+const walletBackendUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
 const Issuers = () => {
 	const { openID4VCIClients, httpProxy, openID4VCIHelper } = useCommunicationProtocols();
@@ -142,7 +143,6 @@ const Issuers = () => {
 				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
 
 				console.log("new loc = ", newLoc)
-
 				window.location.href = newLoc;
 			}).catch((err) => {
 				console.error(err)

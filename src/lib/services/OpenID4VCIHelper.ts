@@ -11,15 +11,26 @@ export class OpenID4VCIHelper implements IOpenID4VCIHelper {
 		this.httpProxy = httpProxy;
 	}
 	async getAuthorizationServerMetadata(credentialIssuerIdentifier: string): Promise<{ authzServeMetadata: OpenidAuthorizationServerMetadata }> {
-		const response = await this.httpProxy.get(`${credentialIssuerIdentifier}/.well-known/oauth-authorization-server`, {});
-		const authzServeMetadata = OpenidAuthorizationServerMetadataSchema.parse(response.data);
-		return { authzServeMetadata };
+		try {
+			const response = await this.httpProxy.get(`${credentialIssuerIdentifier}/.well-known/oauth-authorization-server`, {});
+			const authzServeMetadata = OpenidAuthorizationServerMetadataSchema.parse(response.data);
+			return { authzServeMetadata };
+		}
+		catch(err) {
+			throw new Error("Couldn't get Authorization Server Metadata");
+		}
 	}
 
 	async getCredentialIssuerMetadata(credentialIssuerIdentifier: string): Promise<{ metadata: OpenidCredentialIssuerMetadata }> {
-		const response = await this.httpProxy.get(`${credentialIssuerIdentifier}/.well-known/openid-credential-issuer`, {});
-		const metadata = OpenidCredentialIssuerMetadataSchema.parse(response.data);
-		return { metadata };
+		try {
+			const response = await this.httpProxy.get(`${credentialIssuerIdentifier}/.well-known/openid-credential-issuer`, {});
+			const metadata = OpenidCredentialIssuerMetadataSchema.parse(response.data);
+			return { metadata };
+		}
+		catch(err) {
+			throw new Error("Couldn't get Credential Issuer Metadata");
+		}
+
 	}
 
 }
