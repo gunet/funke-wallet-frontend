@@ -60,7 +60,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		return this.config.credentialIssuerMetadata.credential_configurations_supported
 	}
 
-	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported): Promise<{ url: string; client_id: string; request_uri: string; }> {
+	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported, userDisplayname: string = ""): Promise<{ url: string; client_id: string; request_uri: string; }> {
 		const { code_challenge, code_verifier } = await pkce();
 
 		const formData = new URLSearchParams();
@@ -73,6 +73,8 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		formData.append("code_challenge", code_challenge);
 
 		formData.append("code_challenge_method", "S256");
+
+		formData.append("state", btoa(JSON.stringify({displayName: userDisplayname})).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""));
 
 		formData.append("redirect_uri", redirectUri);
 

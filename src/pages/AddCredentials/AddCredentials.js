@@ -128,7 +128,8 @@ const Issuers = () => {
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
 			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
-			cl.generateAuthorizationRequest(selectedConfiguration).then(({ url, client_id, request_uri }) => {
+			const { displayName } = api.getSession();
+			cl.generateAuthorizationRequest(selectedConfiguration, displayName).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);
 				// Construct the base URL

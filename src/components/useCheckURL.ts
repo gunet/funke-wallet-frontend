@@ -101,7 +101,7 @@ function useCheckURL(urlToCheck: string): {
 		if (Object.keys(openID4VCIClients).length && u.searchParams.get('finishUrl')) {
 			httpProxy.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
 				for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
-					console.log("Resp loc = ", resp.headersp['location'])
+					console.log("Resp loc = ", resp.headers['location'])
 					openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(resp.headers['location'])
 						.catch(err => {
 							console.error(err)
