@@ -124,10 +124,21 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		formData.append('code_verifier', flowState.code_verifier);
 		formData.append('redirect_uri', redirectUri);
 
-		const response = await this.httpProxy.post(tokenEndpoint, formData.toString(), {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			'DPoP': dpop
-		});
+		let response;
+		try {
+			response = await this.httpProxy.post(tokenEndpoint, formData.toString(), {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				'DPoP': dpop
+			});
+		}
+		catch(err) {
+			console.log("failed token request")
+			console.error(err);
+			dpopNonceHeader = err.response.data.err.headers['dpop-nonce'];
+			console.log("Found dpop nonce header = ", dpopNonceHeader)
+			this.handleAuthorizationResponse(url, dpopNonceHeader);
+			return;
+		}
 
 		console.log("Token response = ", response)
 

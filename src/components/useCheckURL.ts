@@ -89,9 +89,19 @@ function useCheckURL(urlToCheck: string): {
 		}
 
 		const u = new URL(urlToCheck);
+		for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
+			console.log("Url to check = ", urlToCheck)
+			openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(urlToCheck)
+				.catch(err => {
+					console.log("Error during the handling of authorization response")
+					console.error(err)
+				});
+		}
+		
 		if (Object.keys(openID4VCIClients).length && u.searchParams.get('finishUrl')) {
 			httpProxy.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
 				for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
+					console.log("Resp loc = ", resp.headersp['location'])
 					openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(resp.headers['location'])
 						.catch(err => {
 							console.error(err)
