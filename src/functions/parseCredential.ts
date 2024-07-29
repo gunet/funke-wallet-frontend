@@ -29,7 +29,6 @@ const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
 export const parseCredential = async (credential: StorableCredential): Promise<object> => {
 
-
 	if (credential.format == VerifiableCredentialFormat.SD_JWT_VC) { // is SD-JWT
 		return await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
 			.withHasher(hasherAndAlgorithm)

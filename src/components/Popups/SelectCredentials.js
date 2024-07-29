@@ -220,7 +220,7 @@ function SelectCredentials({ showPopup, setShowPopup, setSelectionMap, conforman
 								aria-label={`${vcEntity.friendlyName}`}
 								title={t('selectCredentialPopup.credentialSelectTitle', { friendlyName: vcEntity.friendlyName })}
 							>
-								<CredentialImage key={vcEntity.credentialIdentifier} credential={vcEntity.credential}
+								<CredentialImage key={vcEntity.credentialIdentifier} credential={{ ...vcEntity }}
 									className={"w-full object-cover rounded-xl"}
 								/>
 								<div className="absolute bottom-2 right-2" style={{ zIndex: "2000" }}>
@@ -241,7 +241,7 @@ function SelectCredentials({ showPopup, setShowPopup, setSelectionMap, conforman
 								<div
 									className={`transition-all ease-in-out duration-1000 overflow-hidden shadow-md rounded-lg dark:bg-gray-700 ${credentialDisplay[vcEntity.credentialIdentifier] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
 								>
-									<CredentialInfo credential={vcEntity.credential} mainClassName={"text-xs w-full"} />
+									<CredentialInfo credential={{ ...vcEntity }} mainClassName={"text-xs w-full"} />
 								</div>
 							</div>
 						</div>
