@@ -137,8 +137,11 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			console.log("failed token request")
 			console.error(err);
 			dpopNonceHeader = err.response.data.err.headers['dpop-nonce'];
-			console.log("Found dpop nonce header = ", dpopNonceHeader)
-			this.handleAuthorizationResponse(url, dpopNonceHeader);
+			if (dpopNonceHeader) {
+				console.log("Found dpop nonce header = ", dpopNonceHeader)
+				this.handleAuthorizationResponse(url, dpopNonceHeader);
+				return;
+			}
 			return;
 		}
 
