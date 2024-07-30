@@ -97,7 +97,7 @@ function useCheckURL(urlToCheck: string): {
 					console.error(err)
 				});
 		}
-		
+
 		if (Object.keys(openID4VCIClients).length && u.searchParams.get('finishUrl')) {
 			httpProxy.get(u.searchParams.get('finishUrl'), { }).then((resp) => {
 				for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {

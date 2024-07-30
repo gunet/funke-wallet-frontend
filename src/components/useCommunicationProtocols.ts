@@ -65,7 +65,7 @@ export function useCommunicationProtocols() {
 				authorizationServerMetadata: authorizationServerMetadata.authzServeMetadata,
 			}
 		}));
-		
+
 		clientConfigs = clientConfigs.filter((conf) => conf != null);
 
 
