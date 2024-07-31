@@ -276,6 +276,10 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 					return [...(cachedUsers || [])];
 				},
 
+				getUserHandleB64u: (): string => {
+					return (userHandleB64u);
+				},
+
 				forgetCachedUser: (user: CachedUser): void => {
 					setCachedUsers((cachedUsers) => cachedUsers.filter((cu) => cu.userHandleB64u !== user.userHandleB64u));
 				},

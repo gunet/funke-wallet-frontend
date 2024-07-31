@@ -7,6 +7,7 @@ import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
 import { base64url } from 'jose';
 import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
+import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
 
 function highlightBestSequence(issuer, search) {
 	if (typeof issuer !== 'string' || typeof search !== 'string') {
@@ -39,6 +40,7 @@ const Issuers = () => {
 	const [credentialIssuers, setCredentialIssuers] = useState([]);
 	const [availableCredentialConfigurations, setAvailableCredentialConfigurations] = useState(null);
 
+	const keystore = useLocalStorageKeystore();
 	const { t } = useTranslation();
 
 	async function getAllCredentialIssuerMetadata() {
@@ -127,8 +129,8 @@ const Issuers = () => {
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
 			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
-			const { displayName } = api.getSession();
-			cl.generateAuthorizationRequest(selectedConfiguration, displayName).then(({ url, client_id, request_uri }) => {
+			const userHandleB64u  = keystore.getUserHandleB64u();
+			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);
 				// Construct the base URL
