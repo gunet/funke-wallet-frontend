@@ -25,7 +25,7 @@ const isMobile = window.innerWidth <= 480;
 const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.replace('http', 'eid') : process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
 
 const Issuers = () => {
-	const { openID4VCIClients, httpProxy, openID4VCIHelper } = useCommunicationProtocols();
+	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
 
 	const api = useApi();
 	const [searchQuery, setSearchQuery] = useState('');

@@ -56,7 +56,6 @@ const renderRow = (fieldName, label, fieldValue) => {
 
 const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:text-base pt-5 pr-2 w-full" }) => {
 
-	const { } = useCommunicationProtocols()
 	const [parsedCredential, setParsedCredential] = useState(null);
 
 	useEffect(() => {
@@ -81,7 +80,7 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
 							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
-							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth.locality)}
+							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
 							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
