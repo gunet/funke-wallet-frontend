@@ -4,6 +4,9 @@ import {
 	HasherAndAlgorithm,
 	SdJwt,
 } from '@sd-jwt/core'
+import { VerifiableCredentialFormat } from '../lib/schemas/vc';
+import { StorableCredential } from '../lib/types/StorableCredential';
+import { convertToJSONWithMaps, parseMsoMdocCredential, verifyMdocWithAllCerts } from '../lib/mdl/mdl';
 
 export enum CredentialFormat {
 	VC_SD_JWT = "vc+sd-jwt",
@@ -20,18 +23,25 @@ const hasherAndAlgorithm: HasherAndAlgorithm = {
 	algorithm: HasherAlgorithm.Sha256
 }
 
-export const parseCredential = async (credential: string | object): Promise<object> => {
-	if (typeof credential == 'string') { // is JWT
-		if (credential.includes('~')) { // is SD-JWT
-			return SdJwt.fromCompact<Record<string, unknown>, any>(credential)
-				.withHasher(hasherAndAlgorithm)
-				.getPrettyClaims()
-				.then((payload) => payload.vc);
-		}
-		else { // is plain JWT
-			return parseJwt(credential)
-				.then((payload) => payload.vc);
-		}
+export const parseCredential = async (credential: StorableCredential): Promise<object> => {
+
+	if (credential.format == VerifiableCredentialFormat.SD_JWT_VC) { // is SD-JWT
+		return await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
+			.withHasher(hasherAndAlgorithm)
+			.getPrettyClaims()
+			.then((payload) => payload.vc ? payload.vc : payload)
 	}
-	throw new Error("Type of credential is not supported")
+
+	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
+		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype);
+		const result = await verifyMdocWithAllCerts(parsed);
+		const ns = parsed.documents[0].getIssuerNameSpace(credential.doctype);
+		return convertToJSONWithMaps(ns);
+	}
+
+	if (credential.format == VerifiableCredentialFormat.VC_JWT) { // is plain JWT
+		return parseJwt(credential.credential)
+			.then((payload) => payload.vc ? payload.vc : payload);
+	}
+
 }

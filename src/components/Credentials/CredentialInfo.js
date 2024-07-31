@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { BiSolidCategoryAlt, BiSolidUserCircle } from 'react-icons/bi';
 import { AiFillCalendar } from 'react-icons/ai';
 import { RiPassExpiredFill } from 'react-icons/ri';
-import { MdTitle, MdGrade, MdOutlineNumbers } from 'react-icons/md';
+import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice } from 'react-icons/md';
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
 import { parseCredential } from '../../functions/parseCredential';
+import { useCommunicationProtocols } from '../useCommunicationProtocols';
 
 const getFieldIcon = (fieldName) => {
 	switch (fieldName) {
@@ -26,6 +27,10 @@ const getFieldIcon = (fieldName) => {
 			return <GiLevelEndFlag size={25} className="inline mr-1" />;
 		case 'grade':
 			return <MdGrade size={25} className="inline mr-1" />;
+		case 'placeOfBirth':
+			return <MdFlag size={25} className="inline mr-1" />;
+		case 'issuingCountry':
+			return <MdLocalPolice size={25} className="inline mr-1" />;
 		default:
 			return null;
 	}
@@ -71,15 +76,16 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 				<tbody className="divide-y-4 divide-transparent">
 					{parsedCredential && (
 						<>
-							{renderRow('expdate', 'Expiration', formatDate(parsedCredential.expirationDate))}
-							{renderRow('familyName', 'Family Name', parsedCredential.credentialSubject.familyName)}
-							{renderRow('firstName', 'First Name', parsedCredential.credentialSubject.firstName)}
-							{renderRow('id', 'Personal ID', parsedCredential.credentialSubject.personalIdentifier)}
-							{renderRow('dateOfBirth', 'Birthday', parsedCredential.credentialSubject.dateOfBirth)}
-							{renderRow('dateOfBirth', 'Birthday', parsedCredential.credentialSubject.birthdate)}
-							{renderRow('diplomaTitle', 'Title', parsedCredential.credentialSubject.diplomaTitle)}
-							{renderRow('eqfLevel', 'EQF', parsedCredential.credentialSubject.eqfLevel)}
-							{renderRow('grade', 'Grade', parsedCredential.credentialSubject.grade)}
+							{renderRow('expdate', 'Expiration', formatDate(parsedCredential?.exp))}
+							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
+							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
+							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
+							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
+							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
+							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
+							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
+							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
+							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
 						</>
 					)}
 				</tbody>
