@@ -12,6 +12,9 @@ export enum SendResponseError {
 	SEND_RESPONSE_ERROR = "SEND_RESPONSE_ERROR",
 }
 
+const isMobile = window.innerWidth <= 480;
+const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.replace('http', 'eid') : process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
+
 
 function useCheckURL(urlToCheck: string): {
 	showSelectCredentialsPopup: boolean,
@@ -89,6 +92,28 @@ function useCheckURL(urlToCheck: string): {
 		}
 
 		const u = new URL(urlToCheck);
+		if (u.protocol == 'openid-credential-offer' || u.searchParams.get('credential_offer')) {
+			for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
+				console.log("Url to check = ", urlToCheck)
+				openID4VCIClients[credentialIssuerIdentifier].handleCredentialOffer(u.toString()).then(({ url, client_id, request_uri }) => {
+					console.log("Request uri = ", request_uri)
+					const urlObj = new URL(url);
+					// Construct the base URL
+					const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+
+					// Parameters
+					// Encode parameters
+					const encodedClientId = encodeURIComponent(client_id);
+					const encodedRequestUri = encodeURIComponent(request_uri);
+					const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
+
+					const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
+
+					console.log("new loc = ", newLoc)
+					window.location.href = newLoc;
+				})
+			}
+		}
 		if (u.searchParams.get('code')) {
 			for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
