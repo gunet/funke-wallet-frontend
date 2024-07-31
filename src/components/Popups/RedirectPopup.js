@@ -11,7 +11,9 @@ const RedirectPopup = ({ loading, availableCredentialConfigurations, handleClose
 	const [selectedConfiguration, setSelectedConfiguration] = useState(null);
 
 	const handleOptionChange = (event) => {
-		setSelectedConfiguration(availableCredentialConfigurations[event.target.value]);
+		if (availableCredentialConfigurations) {
+			setSelectedConfiguration(availableCredentialConfigurations[event.target.value]);
+		}
 	};
 
 	if (loading) {
@@ -42,7 +44,7 @@ const RedirectPopup = ({ loading, availableCredentialConfigurations, handleClose
 				{popupMessage}
 			</p>
 
-			{Object.keys(availableCredentialConfigurations).map((credentialConfigurationId, index) => {
+			{availableCredentialConfigurations && Object.keys(availableCredentialConfigurations).map((credentialConfigurationId, index) => {
 				return (
 					<div class="flex items-center mb-4">
 						<input id={"radio-" + index} onChange={handleOptionChange} type="radio" value={credentialConfigurationId} name="default-radio" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
