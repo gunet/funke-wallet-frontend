@@ -7,6 +7,7 @@ import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
 import { base64url } from 'jose';
 import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
+import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
 
 function highlightBestSequence(issuer, search) {
 	if (typeof issuer !== 'string' || typeof search !== 'string') {
@@ -20,13 +21,12 @@ function highlightBestSequence(issuer, search) {
 }
 
 
-
 const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
-const eIDClientURL = process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
-const walletBackendUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
+const isMobile = window.innerWidth <= 480;
+const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.replace('http', 'eid') : process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
 
 const Issuers = () => {
-	const { openID4VCIClients, httpProxy, openID4VCIHelper } = useCommunicationProtocols();
+	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
 
 	const api = useApi();
 	const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +40,7 @@ const Issuers = () => {
 	const [credentialIssuers, setCredentialIssuers] = useState([]);
 	const [availableCredentialConfigurations, setAvailableCredentialConfigurations] = useState(null);
 
+	const keystore = useLocalStorageKeystore();
 	const { t } = useTranslation();
 
 	async function getAllCredentialIssuerMetadata() {
@@ -128,7 +129,8 @@ const Issuers = () => {
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
 			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
-			cl.generateAuthorizationRequest(selectedConfiguration).then(({ url, client_id, request_uri }) => {
+			const userHandleB64u  = keystore.getUserHandleB64u();
+			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);
 				// Construct the base URL

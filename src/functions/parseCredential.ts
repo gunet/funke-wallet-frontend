@@ -1,4 +1,3 @@
-import axios from 'axios';
 import parseJwt from './ParseJwt';
 import {
 	HasherAlgorithm,
@@ -7,6 +6,7 @@ import {
 } from '@sd-jwt/core'
 import { VerifiableCredentialFormat } from '../lib/schemas/vc';
 import { StorableCredential } from '../lib/types/StorableCredential';
+import { convertToJSONWithMaps, parseMsoMdocCredential, verifyMdocWithAllCerts } from '../lib/mdl/mdl';
 
 export enum CredentialFormat {
 	VC_SD_JWT = "vc+sd-jwt",
@@ -23,12 +23,7 @@ const hasherAndAlgorithm: HasherAndAlgorithm = {
 	algorithm: HasherAlgorithm.Sha256
 }
 
-// @ts-ignore
-const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
-
-
 export const parseCredential = async (credential: StorableCredential): Promise<object> => {
-
 
 	if (credential.format == VerifiableCredentialFormat.SD_JWT_VC) { // is SD-JWT
 		return await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
@@ -38,15 +33,10 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 	}
 
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
-		const response = await axios.post(walletBackendServerUrl + '/utils/mdl/parse', {
-			credential: credential.credential,
-			doctype: credential.doctype
-		}, {
-			headers: {
-				Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('appToken'))}`
-			}
-		});
-		return response.data.namespace;
+		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype);
+		const result = await verifyMdocWithAllCerts(parsed);
+		const ns = parsed.documents[0].getIssuerNameSpace(credential.doctype);
+		return convertToJSONWithMaps(ns);
 	}
 
 	if (credential.format == VerifiableCredentialFormat.VC_JWT) { // is plain JWT
