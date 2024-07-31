@@ -2,7 +2,7 @@ import { MDoc, parse } from "@auth0/mdl";
 import * as cbor from 'cbor-x';
 import * as jose from 'jose';
 
-const trustedCerts = JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U)));
+const trustedCerts = process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U ? JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U))) : [];
 
 
 const importCert = async (cert) => {
