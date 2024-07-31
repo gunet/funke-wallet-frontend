@@ -5,16 +5,13 @@ import pkce from 'pkce-challenge';
 import { IOpenID4VCIClientStateRepository } from '../interfaces/IOpenID4VCIClientStateRepository';
 import { CredentialConfigurationSupported } from '../schemas/CredentialConfigurationSupportedSchema';
 import { OpenID4VCIClientState } from '../types/OpenID4VCIClientState';
-import * as jose from 'jose';
 import { VerifiableCredentialFormat } from '../schemas/vc';
 import { generateDPoP } from '../utils/dpop';
-import axios from 'axios';
 import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
 import { StorableCredential } from '../types/StorableCredential';
+import * as jose from 'jose';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
-// @ts-ignore
-const walletBackendServerUrl = process.env.REACT_APP_WALLET_BACKEND_URL;
 
 export class OpenID4VCIClient implements IOpenID4VCIClient {
 	private config: ClientConfig;
@@ -99,7 +96,6 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		const parsedUrl = new URL(url);
 
 		const code = parsedUrl.searchParams.get('code');
-		console.log("DPOP nonce header = ", dpopNonceHeader)
 		if (!code) {
 			throw new Error("Could not handle authorization response");
 		}
@@ -138,7 +134,6 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			console.error(err);
 			dpopNonceHeader = err.response.data.err.headers['dpop-nonce'];
 			if (dpopNonceHeader) {
-				console.log("Found dpop nonce header = ", dpopNonceHeader)
 				this.handleAuthorizationResponse(url, dpopNonceHeader);
 				return;
 			}
