@@ -61,7 +61,7 @@ const History = () => {
 				credential: findCredentialByPath,
 			}
 		})
-		
+
 		// Set matching credentials and show the popup
 		setMatchingCredentials(vcEntities);
 		setImageModalOpen(true);
