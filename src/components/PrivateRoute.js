@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useApi } from '../api';
 import { useLocalStorageKeystore } from '../services/LocalStorageKeystore';
@@ -6,14 +6,17 @@ import { fetchToken } from '../firebase';
 import Layout from './Layout';
 import Spinner from './Spinner'; // Import your spinner component
 import { useSessionStorage } from '../components/useStorage';
+import OnlineStatusContext from '../context/OnlineStatusContext';
 
 const PrivateRoute = ({ children }) => {
-	const api = useApi();
+	const { isOnline } = useContext(OnlineStatusContext);
+	const api = useApi(isOnline);
 	const [isPermissionGranted, setIsPermissionGranted] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const keystore = useLocalStorageKeystore();
 	const isLoggedIn = api.isLoggedIn() && keystore.isOpen();
 	const [tokenSentInSession, setTokenSentInSession,] = api.useClearOnClearSession(useSessionStorage('tokenSentInSession', null));
+	const [latestIsOnlineStatus, setLatestIsOnlineStatus,] = api.useClearOnClearSession(useSessionStorage('latestIsOnlineStatus', null));
 
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -41,7 +44,7 @@ const PrivateRoute = ({ children }) => {
 		if (isLoggedIn) {
 			requestNotificationPermission();
 		}
-	}, [isLoggedIn, location]);
+	}, [isLoggedIn, location, setTokenSentInSession]);
 
 	useEffect(() => {
 		const sendFcmTokenToBackend = async () => {
@@ -55,11 +58,11 @@ const PrivateRoute = ({ children }) => {
 						const fcmToken = await fetchToken();
 						if (fcmToken !== null) {
 							await api.post('/user/session/fcm_token/add', { fcm_token: fcmToken });
-							setTokenSentInSession(true)
+							setTokenSentInSession(true);
 							console.log('FCM Token success:', fcmToken);
 						} else {
 							console.log('FCM Token failed to get fcmtoken in private route', fcmToken);
-							setTokenSentInSession(false)
+							setTokenSentInSession(false);
 						}
 					} catch (error) {
 						console.error('Error sending FCM token to the backend:', error);
@@ -68,19 +71,51 @@ const PrivateRoute = ({ children }) => {
 					}
 				}
 			}
+		};
+
+		console.log("is online = ", isOnline);
+		if (isOnline) {
+			sendFcmTokenToBackend();
+		} else {
+			setTokenSentInSession(false);
 		}
-
-		sendFcmTokenToBackend();
-	}, [isPermissionGranted]);
-
+	}, [
+		api,
+		isOnline,
+		isPermissionGranted,
+		setTokenSentInSession,
+		tokenSentInSession,
+	]);
 
 	useEffect(() => {
 		if (!isLoggedIn) {
 			const destination = location.pathname + location.search;
 			navigate('/login', { state: { from: destination } });
 		}
-	}, [isLoggedIn, location, navigate]);
+	}, [isLoggedIn, location, navigate, isOnline]);
 
+	useEffect(() => {
+		if (latestIsOnlineStatus === false && isOnline === true) {
+			const performLogout = async () => {
+				api.clearSession();
+				await keystore.close();
+				window.location.href = '/login';
+			};
+			performLogout();
+		}
+		if (isLoggedIn) {
+			setLatestIsOnlineStatus(isOnline);
+		} else {
+			setLatestIsOnlineStatus(null);
+		}
+	}, [
+		api,
+		isLoggedIn,
+		isOnline,
+		keystore,
+		latestIsOnlineStatus,
+		setLatestIsOnlineStatus,
+	]);
 
 	if (!isLoggedIn) {
 		return <Navigate to="/login" state={{ from: location }} replace />;
@@ -89,14 +124,14 @@ const PrivateRoute = ({ children }) => {
 	if (loading || tokenSentInSession === null) {
 		return (
 			<Spinner />
-		)
+		);
 	}
 	else {
 		return (
-		<Layout isPermissionGranted={isPermissionGranted} tokenSentInSession={tokenSentInSession}>
-			{children}
-		</Layout>
-		)
+			<Layout isPermissionGranted={isPermissionGranted} tokenSentInSession={tokenSentInSession}>
+				{children}
+			</Layout>
+		);
 	}
 
 };

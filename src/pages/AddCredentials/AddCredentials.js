@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import QRCodeScanner from '../../components/QRCodeScanner/QRCodeScanner';
 import RedirectPopup from '../../components/Popups/RedirectPopup';
 import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
+import OnlineStatusContext from '../../context/OnlineStatusContext';
 import { base64url } from 'jose';
 import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
 import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
@@ -26,9 +27,10 @@ const isMobile = window.innerWidth <= 480;
 const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.replace('http', 'eid') : process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
 
 const Issuers = () => {
+	const { isOnline } = useContext(OnlineStatusContext);
+	const api = useApi(isOnline);
 	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
 
-	const api = useApi();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [issuers, setIssuers] = useState([]);
 	const [filteredIssuers, setFilteredIssuers] = useState([]);
@@ -76,7 +78,7 @@ const Issuers = () => {
 	useEffect(() => {
 		const fetchIssuers = async () => {
 			try {
-				const response = await api.get('/legal_person/issuers/all');
+				const response = await api.getExternalEntity('/legal_person/issuers/all');
 				const fetchedIssuers = response.data;
 				setIssuers(fetchedIssuers);
 				setFilteredIssuers(fetchedIssuers);

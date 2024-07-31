@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import { parseCredential } from "../../functions/parseCredential";
 import StatusRibbon from '../../components/Credentials/StatusRibbon';
 import ausweis_card from '../../assets/images/ausweis_card.png';
@@ -11,7 +11,7 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 		parseCredential(credential).then((c) => {
 			setParsedCredential(c);
 		});
-	}, []);
+	}, [credential]);
 
 	return (
 		<>
@@ -24,5 +24,5 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 				</>
 			)}
 		</>
-	)
-}
+	);
+};

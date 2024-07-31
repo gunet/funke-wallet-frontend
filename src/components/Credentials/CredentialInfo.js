@@ -17,7 +17,7 @@ const getFieldIcon = (fieldName) => {
 		case 'dateOfBirth':
 			return <AiFillCalendar size={25} className="inline mr-1" />;
 		case 'id':
-			return <MdOutlineNumbers size={25} className="inline mr-1" />
+			return <MdOutlineNumbers size={25} className="inline mr-1" />;
 		case 'familyName':
 		case 'firstName':
 			return <BiSolidUserCircle size={25} className="inline mr-1" />;
@@ -62,7 +62,7 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 		parseCredential(credential).then((c) => {
 			setParsedCredential(c);
 		});
-	}, []);
+	}, [credential]);
 
 	useEffect(() => {
 		parseCredential(credential).then((c) => {
