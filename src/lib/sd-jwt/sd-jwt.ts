@@ -16,11 +16,11 @@ export async function verifySdJwtBasedOnTrustAnchors(credential: string) {
 	}
 
 	const publicKey = await jose.importX509(getPublicKeyFromB64Cert(x5c[0]), 'ES256');
-  try {
-    await jose.jwtVerify(cred, publicKey);
-    return true;
-  } catch (err) {
-    console.error('JWT verification failed:', err);
+	try {
+		await jose.jwtVerify(cred, publicKey);
+		return true;
+	} catch (err) {
+		console.error('JWT verification failed:', err);
 		return false;
-  }
+	}
 }
