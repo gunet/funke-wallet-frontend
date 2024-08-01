@@ -3,10 +3,13 @@ import {
 	HasherAlgorithm,
 	HasherAndAlgorithm,
 	SdJwt,
+	SignatureAndEncryptionAlgorithm,
+	Verifier,
 } from '@sd-jwt/core'
 import { VerifiableCredentialFormat } from '../lib/schemas/vc';
 import { StorableCredential } from '../lib/types/StorableCredential';
 import { convertToJSONWithMaps, parseMsoMdocCredential, verifyMdocWithAllCerts } from '../lib/mdl/mdl';
+import { verifySdJwtBasedOnTrustAnchors } from '../lib/sd-jwt/sd-jwt';
 
 export enum CredentialFormat {
 	VC_SD_JWT = "vc+sd-jwt",
@@ -25,7 +28,20 @@ const hasherAndAlgorithm: HasherAndAlgorithm = {
 
 export const parseCredential = async (credential: StorableCredential): Promise<object> => {
 
+	const verifierCb: Verifier = async ({ header, message, signature }) => {
+		if (header.alg && header.alg !== SignatureAndEncryptionAlgorithm.ES256) {
+			throw new Error('only ES256 is supported');
+		}
+		if (header['x5c'] && header['x5c'][0]) {
+			return verifySdJwtBasedOnTrustAnchors(credential.credential)
+		}
+	}
+
 	if (credential.format == VerifiableCredentialFormat.SD_JWT_VC) { // is SD-JWT
+		const verificationResult = await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
+			.withHasher(hasherAndAlgorithm)
+			.verify(verifierCb);
+		console.log("SD Verification result = ", verificationResult)
 		return await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
 			.withHasher(hasherAndAlgorithm)
 			.getPrettyClaims()
@@ -35,6 +51,7 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
 		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype);
 		const result = await verifyMdocWithAllCerts(parsed);
+		console.log("MDOC verification result = ", result)
 		const ns = parsed.documents[0].getIssuerNameSpace(credential.doctype);
 		return convertToJSONWithMaps(ns);
 	}
