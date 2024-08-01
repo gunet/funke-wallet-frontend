@@ -148,6 +148,13 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 
 		// Credential Request
+		this.credentialRequest(response, privateKey, publicKey, flowState);
+	}
+
+	private async credentialRequest(response: any, privateKey: jose.KeyLike, publicKey: jose.KeyLike, flowState: OpenID4VCIClientState) {
+		const {
+			data: { access_token, c_nonce, c_nonce_expires_in, expires_in, token_type },
+		} = response;
 		const newDPoPNonce = response.headers['dpop-nonce'];
 		const credentialEndpoint = this.config.credentialIssuerMetadata.credential_endpoint;
 		const credentialEndpointDPoP = await generateDPoP(
