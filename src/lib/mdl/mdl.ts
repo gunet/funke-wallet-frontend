@@ -1,41 +1,32 @@
 import { MDoc, parse } from "@auth0/mdl";
 import * as cbor from 'cbor-x';
 import * as jose from 'jose';
-
-const trustedCerts = process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U ? JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U))) : [];
-
-
-const importCert = async (cert) => {
-	// convert issuer cert to KeyLike
-	const issuerCertJose = await jose.importX509(cert, 'ES256', { extractable: true });
-	// convert issuer cert from KeyLike to JWK
-	const issuerCertJwk = await jose.exportJWK(issuerCertJose)
-	// import issuer cert from JWK to CryptoKey
-	const importedCert = await crypto.subtle.importKey('jwk',
-		issuerCertJwk,
-		{ name: 'ECDSA', namedCurve: 'P-256' },
-		true,
-		['verify']
-	);
-	return importedCert;
-}
+import { binaryToPem, fromDerToPKIJSCertificate, importCert, validateChain } from "../utils/pki";
 
 
 export const verifyMdocWithAllCerts = async (mdoc: MDoc) => {
 	const issuerAuth = mdoc.documents[0].issuerSigned.issuerAuth;
-	const results = await Promise.all(trustedCerts.map(async (cert: string) => {
-		cert = cert.trim();
-		try {
-			return issuerAuth.verify(await importCert(cert));
-		}
-		catch (err) {
-			console.error(err)
-			return false;
-		}
-	})) as boolean[];
+	// @ts-ignore
+	const chainDER = issuerAuth.unprotectedHeaders.get('33') as Array<Uint8Array>;
+	const chain = chainDER.map((derCert) => fromDerToPKIJSCertificate(derCert));
 
-	const verifiedWithAtleastOneCert = results.find((v) => v == true);
-	return verifiedWithAtleastOneCert == true;
+	const isValidChain = await validateChain(chain);
+	if (!isValidChain) {
+		return false;
+	}
+
+	console.log("CHAIN is valid")
+	try {
+		const pem = binaryToPem(chainDER[0]);
+		const importedCert =  await importCert(pem);
+		const result = await issuerAuth.verify(importedCert)
+		return result;
+	}
+	catch(err) {
+		console.log("MDOC verification failed")
+		console.error(err)
+		return false;
+	}
 }
 
 export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: string): Promise<any> => {

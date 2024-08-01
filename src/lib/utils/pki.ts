@@ -1,0 +1,100 @@
+import { CertificateChainValidationEngine } from "pkijs";
+import * as pkijs from "pkijs";
+import { fromBER } from "asn1js";
+import * as jose from 'jose';
+
+const trustedCerts = process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U ? JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U))) : [];
+
+
+// Assuming `certPEM` is a PEM-encoded certificate string
+const pemToBinary = (pem) => {
+  const b64 = pem.replace(/(-----(BEGIN|END) CERTIFICATE-----|\s)/g, '');
+	const binaryString = atob(b64);
+	// Convert to ArrayBuffer
+	const len = binaryString.length;
+	const bytes = new Uint8Array(len);
+	for (let i = 0; i < len; i++) {
+			bytes[i] = binaryString.charCodeAt(i);
+	}
+	return bytes.buffer;
+};
+
+
+
+export function fromPemToPKIJSCertificate(pem) {
+	const certBuffer = pemToBinary(pem);
+	const asn1 = fromBER(certBuffer);
+	return new pkijs.Certificate({ schema: asn1.result });
+}
+
+export function getPublicKeyFromB64Cert(certBase64) {
+  const certPEM = `-----BEGIN CERTIFICATE-----\n${certBase64.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`;
+  return certPEM;
+}
+
+export function toPem(b64Cert) {
+	return `-----BEGIN CERTIFICATE-----\n${b64Cert}\n-----END CERTIFICATE-----`;
+}
+
+export async function validateChain(certChain) {
+  const certChainValidationEngine = new CertificateChainValidationEngine({
+    trustedCerts: trustedCerts.map((c) => fromPemToPKIJSCertificate(c)), // Trusted root certificates
+    certs: certChain,         // The certificate chain to validate
+  });
+
+
+  try {
+    const result = await certChainValidationEngine.verify();
+		return result.result;
+  } catch (error) {
+    return false;
+  }
+}
+
+export function binaryToPem(binaryData) {
+  // Convert ArrayBuffer to Uint8Array
+  const byteArray = new Uint8Array(binaryData);
+  let binaryString = '';
+  // Iterate through the byte array and build a binary string
+  for (let i = 0; i < byteArray.length; i++) {
+    binaryString += String.fromCharCode(byteArray[i]);
+  }
+
+  // Convert the binary string to a base64 encoded string
+  const base64String = btoa(binaryString);
+
+  // Split the base64 string into 64-character lines
+  const lineLength = 64;
+  let pemString = '';
+  for (let i = 0; i < base64String.length; i += lineLength) {
+    pemString += base64String.slice(i, i + lineLength) + '\n';
+  }
+
+  // Add the PEM header and footer
+  pemString = `-----BEGIN CERTIFICATE-----\n${pemString}-----END CERTIFICATE-----`;
+
+  return pemString;
+};
+
+
+
+export async function importCert(cert) {
+	// convert issuer cert to KeyLike
+	const issuerCertJose = await jose.importX509(cert, 'ES256', { extractable: true });
+	// convert issuer cert from KeyLike to JWK
+	const issuerCertJwk = await jose.exportJWK(issuerCertJose)
+	// import issuer cert from JWK to CryptoKey
+	const importedCert = await crypto.subtle.importKey('jwk',
+		issuerCertJwk,
+		{ name: 'ECDSA', namedCurve: 'P-256' },
+		true,
+		['verify']
+	);
+	return importedCert;
+}
+
+export function fromDerToPKIJSCertificate(der) {
+	const asn1 = fromBER(der);
+	return new pkijs.Certificate({ schema: asn1.result });
+}
+

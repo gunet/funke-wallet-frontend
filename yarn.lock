@@ -9051,7 +9051,7 @@ pkg-up@^3.1.0:
   dependencies:
     find-up "^3.0.0"
 
-pkijs@^3.0.15:
+pkijs@^3.0.15, pkijs@^3.2.4:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/pkijs/-/pkijs-3.2.4.tgz#55ed72b363a20fbd42b139ee3b72e54483635171"
   integrity sha512-Et9V5QpvBilPFgagJcaKBqXjKrrgF5JL2mSDELk1vvbOTt4fuBhSSsGn9Tcz0TQTfS5GCpXQ31Whrpqeqp0VRg==
