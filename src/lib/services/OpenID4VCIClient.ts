@@ -12,6 +12,7 @@ import { StorableCredential } from '../types/StorableCredential';
 import * as jose from 'jose';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class OpenID4VCIClient implements IOpenID4VCIClient {
 	private config: ClientConfig;
@@ -155,8 +156,17 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		const {
 			data: { access_token, c_nonce, c_nonce_expires_in, expires_in, token_type },
 		} = response;
+		console.log('response.data = ', response.data);
+		console.log('response.headers = ', response.headers);
+
+		// Make access_token expire sooner than subsequent c_nonces
+		await sleep(10 * 1000);
+
 		const newDPoPNonce = response.headers['dpop-nonce'];
 		const credentialEndpoint = this.config.credentialIssuerMetadata.credential_endpoint;
+		let fetched_c_nonce;
+
+		// First trial on credential endpoint
 		const credentialEndpointDPoP = await generateDPoP(
 			privateKey,
 			publicKey,
@@ -182,33 +192,164 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
 			credentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
 		}
+		try {
+			const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
+				"Authorization": `DPoP ${access_token}`,
+				"dpop": credentialEndpointDPoP,
+			});
+			console.log("First trial - Credential response:", credentialResponse.data);
+			const { credential } = credentialResponse.data;
+			fetched_c_nonce = credentialResponse.data.c_nonce;
+			if (credential) {
+				await this.storeCredential({
+					credential: credential,
+					format: flowState.selectedCredentialConfiguration.format,
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC && { vct: flowState.selectedCredentialConfiguration.vct }),
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC && { doctype: flowState.selectedCredentialConfiguration.doctype }),
+				});
+			}
+		} catch (err) {
+			console.error("Error during first credential issuance");
+			console.error(err.response.data.err.data.error_description);
+		}
 
-		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
-			"Authorization": `DPoP ${access_token}`,
-			"dpop": credentialEndpointDPoP,
-		});
-		const { credential } = credentialResponse.data;
+		// Second trial using the same access_token, same DPoP, same proof
+		try {
+			console.log("Second trial - Using same access_token and DPoP");
+			const credentialResponseSecondTrial = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
+				"Authorization": `DPoP ${access_token}`,
+				"dpop": credentialEndpointDPoP,
+			});
+			console.log("Second trial - Credential response:", credentialResponseSecondTrial.data);
+			const { credential } = credentialResponseSecondTrial.data;
+			fetched_c_nonce = credentialResponseSecondTrial.data.c_nonce;
+			if (credential) {
+				await this.storeCredential({
+					credential: credential,
+					format: flowState.selectedCredentialConfiguration.format,
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC && { vct: flowState.selectedCredentialConfiguration.vct }),
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC && { doctype: flowState.selectedCredentialConfiguration.doctype }),
+				});
+			}
+		} catch (err) {
+			console.error("Error during second credential issuance");
+			console.error('second:', err.response.data.err.data.error_description);
+		}
+
+		// Third trial using the same access_token, DPoP with new jti, new proof (with fetched c_nonce)
+		let { jws: newJws } = await this.generateNonceProof(fetched_c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
+		const thirdCredentialEndpointBody = {
+			"proof": {
+				"proof_type": "jwt",
+				"jwt": newJws,
+			},
+			"format": flowState.selectedCredentialConfiguration.format,
+		};
+
+		if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC) {
+			thirdCredentialEndpointBody['vct'] = flowState.selectedCredentialConfiguration.vct;
+		} else if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC) {
+			thirdCredentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
+		}
+		const thirdCredentialEndpointDPoP = await generateDPoP(
+			privateKey,
+			publicKey,
+			"-ThirdTrialCredEndpoint",
+			"POST",
+			credentialEndpoint,
+			newDPoPNonce,
+			access_token
+		);
 
 		try {
-			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
-			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
+			console.log("Third trial - Using same access_token, DPoP with new jti, new proof (with fetched c_nonce)");
+			const credentialResponseThirdTrial = await this.httpProxy.post(credentialEndpoint, thirdCredentialEndpointBody, {
+				"Authorization": `DPoP ${access_token}`,
+				"dpop": thirdCredentialEndpointDPoP,
+			});
+			console.log("Third trial - Credential response:", credentialResponseThirdTrial.data);
+			const { credential } = credentialResponseThirdTrial.data;
+			fetched_c_nonce = credentialResponseThirdTrial.data.c_nonce;
+			if (credential) {
 				await this.storeCredential({
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
-					vct: flowState.selectedCredentialConfiguration.vct,
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC && { vct: flowState.selectedCredentialConfiguration.vct }),
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC && { doctype: flowState.selectedCredentialConfiguration.doctype }),
 				});
 			}
-			else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
+		} catch (err) {
+			console.error("Error during third credential issuance");
+			console.error('third: ', err.response.data.err.data.error_description);
+		}
+
+		// Fourth trial using the same access_token, same dpop, new proof (with fetched c_nonce)
+		let { jws: fourthJwt } = await this.generateNonceProof(fetched_c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
+		const fourthCredentialEndpointBody = {
+			"proof": {
+				"proof_type": "jwt",
+				"jwt": fourthJwt,
+			},
+			"format": flowState.selectedCredentialConfiguration.format,
+		};
+
+		if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC) {
+			fourthCredentialEndpointBody['vct'] = flowState.selectedCredentialConfiguration.vct;
+		} else if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC) {
+			fourthCredentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
+		}
+
+		try {
+			console.log("Fourth trial - Using same access_token, same DPoP, new proof (with fetched c_nonce)");
+			const credentialResponseFourthTrial = await this.httpProxy.post(credentialEndpoint, fourthCredentialEndpointBody, {
+				"Authorization": `DPoP ${access_token}`,
+				"dpop": thirdCredentialEndpointDPoP,
+			});
+			console.log("Fourth trial - Credential response:", credentialResponseFourthTrial.data);
+			const { credential } = credentialResponseFourthTrial.data;
+			fetched_c_nonce = credentialResponseFourthTrial.data.c_nonce;
+			if (credential) {
 				await this.storeCredential({
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
-					doctype: flowState.selectedCredentialConfiguration.doctype,
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC && { vct: flowState.selectedCredentialConfiguration.vct }),
+					...(flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC && { doctype: flowState.selectedCredentialConfiguration.doctype }),
 				});
 			}
+		} catch (err) {
+			console.error("Error during fourth credential issuance");
+			console.error('fourth: ', err.response.data.err.data.error_description);
 		}
-		catch (err) {
-			console.error("Failed to recieve credential during issuance protocol");
-			console.error(err);
+
+		// Fifth trial using the same EXPIRED access_token, same dpop, new proof (with fetched c_nonce)
+		let { jws: fifthJwt } = await this.generateNonceProof(fetched_c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
+		const fifthCredentialEndpointBody = {
+			"proof": {
+				"proof_type": "jwt",
+				"jwt": fifthJwt,
+			},
+			"format": flowState.selectedCredentialConfiguration.format,
+		};
+
+		if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.SD_JWT_VC) {
+			fifthCredentialEndpointBody['vct'] = flowState.selectedCredentialConfiguration.vct;
+		} else if (flowState.selectedCredentialConfiguration.format === VerifiableCredentialFormat.MSO_MDOC) {
+			fifthCredentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
 		}
+		setTimeout(async () => {
+			try {
+				console.log("Fifth trial - Using expired access_token");
+				const credentialResponseExpired = await this.httpProxy.post(credentialEndpoint, fifthCredentialEndpointBody, {
+					"Authorization": `DPoP ${access_token}`,
+					"dpop": thirdCredentialEndpointDPoP,
+				});
+				console.log("Fifth trial - Credential response with expired token:", credentialResponseExpired.data);
+			} catch (err) {
+				console.error("Error during fifth credential issuance with expired token");
+				console.error('fifth: ', err.response.data.err.data.error_description);
+			}
+		}, (expires_in + 3) * 1000);  // wait a bit longer than the expiration time, fetched_c_nonce shouldn't have expired yet
+
 	}
+
 }
