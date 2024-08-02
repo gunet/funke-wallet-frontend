@@ -92,7 +92,6 @@ function SelectCredentials({ showPopup, setShowPopup, setSelectionMap, conforman
 				const filteredVcEntities = vcEntities.filter(vcEntity =>
 					conformantCredentialsMap[keys[currentIndex]].credentials.includes(vcEntity.credentialIdentifier)
 				);
-
 				setRequestedFields(conformantCredentialsMap[keys[currentIndex]].requestedFields);
 				setVcEntities(filteredVcEntities);
 			} catch (error) {
