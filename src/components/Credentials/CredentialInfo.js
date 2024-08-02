@@ -92,7 +92,8 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
-							{renderRow('over18', 'Age Over 18', parsedCredential?.age_equal_or_over["18"])}
+							{renderRow('over18', 'Age Over 18', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['18'] : null)}
+							{renderRow('over18', 'Age Over 18', parsedCredential?.age_over_18)}
 						</>
 					)}
 				</tbody>
