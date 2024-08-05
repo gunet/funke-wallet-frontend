@@ -130,8 +130,10 @@
 	"pageAddCredentials": {
 		"description": "Search and choose an issuer for credential retrieval",
 		"noFound": "No matching issuers found.",
+		"pidSdJwt": "SD JWT PID",
+		"pidMsoMdoc": "mDoc PID",
 		"popup": {
-			"message": "You have selected {{issuerName}}. If you continue, you will be redirected in the current tab to the issuer's page.",
+			"message": "You have selected {{issuerName}}. This credential issuer can provide credentials of the following types. By selecting one type and clicking on 'Continue', you will be redirected to the issuer.",
 			"title": "Selected Issuer:"
 		},
 		"searchPlaceholder": "Search issuers..."
