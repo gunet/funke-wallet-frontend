@@ -65,7 +65,7 @@ export interface LocalStorageKeystore {
 	): Promise<[CryptoKey, WrappedKeyInfo]>,
 	upgradePrfKey(prfKeyInfo: WebauthnPrfEncryptionKeyInfo, promptForPrfRetry: () => Promise<boolean | AbortSignal>): Promise<[EncryptedContainer, CommitCallback]>,
 	getCachedUsers(): CachedUser[],
-	getUserHandleB64u(): string,
+	getUserHandleB64u(): string | null,
 	forgetCachedUser(user: CachedUser): void,
 
 	createIdToken(nonce: string, audience: string): Promise<{ id_token: string; }>,
@@ -350,7 +350,7 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 					return [...(cachedUsers || [])];
 				},
 
-				getUserHandleB64u: (): string => {
+				getUserHandleB64u: (): string | null => {
 					return (userHandleB64u);
 				},
 
