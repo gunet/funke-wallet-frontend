@@ -131,7 +131,7 @@ const Issuers = () => {
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
 			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
-			const userHandleB64u  = keystore.getUserHandleB64u();
+			const userHandleB64u = keystore.getUserHandleB64u();
 			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);
@@ -216,7 +216,7 @@ const Issuers = () => {
 					handleContinue={handleContinue}
 					availableCredentialConfigurations={availableCredentialConfigurations}
 					popupTitle={`${t('pageAddCredentials.popup.title')} ${selectedIssuer?.selectedDisplay.name}`}
-					popupMessage={`${t('pageAddCredentials.popup.messagePart1')} ${selectedIssuer?.selectedDisplay.name}${t('pageAddCredentials.popup.messagePart2')}`}
+					popupMessage={`${t('pageAddCredentials.popup.messagePart1')} ${selectedIssuer?.selectedDisplay.name}${t('pageAddCredentials.popup.messagePart2IssuerSelect')}`}
 				/>
 			)}
 

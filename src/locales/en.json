@@ -129,6 +129,7 @@
 		"popup": {
 			"messagePart1": "You have selected",
 			"messagePart2": ". If you continue, you will be redirected in the current tab to the issuer's page.",
+			"messagePart2IssuerSelect": ". This credential issuer can provide credentials of the following types. By selecting one type and clicking on 'Continue', you will be redirected to the issuer.",
 			"title": "Selected Issuer:"
 		},
 		"searchPlaceholder": "Search issuers..."
