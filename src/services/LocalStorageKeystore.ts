@@ -8,6 +8,7 @@ import { useOnUserInactivity } from "../components/useOnUserInactivity";
 
 import * as keystore from "./keystore";
 import type { AsymmetricEncryptedContainerKeys, EncryptedContainer, PrivateData, PublicData, UnlockSuccess, WebauthnPrfEncryptionKeyInfo, WebauthnPrfSaltInfo, WrappedKeyInfo } from "./keystore";
+import { MDoc } from "@auth0/mdl";
 
 
 type UserData = {
@@ -70,6 +71,7 @@ export interface LocalStorageKeystore {
 	createIdToken(nonce: string, audience: string): Promise<{ id_token: string; }>,
 	signJwtPresentation(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }>,
 	generateOpenid4vciProof(c_nonce: string, audience: string, clientId: string): Promise<{ proof_jwt: string }>,
+	generateDeviceResponse(mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string): Promise<{ deviceResponseMDoc: MDoc }>,
 }
 
 /** A stateful wrapper around the keystore module, storing state in the browser's localStorage and sessionStorage. */
@@ -367,6 +369,10 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 
 				generateOpenid4vciProof: async (cNonce: string, audience: string, clientId: string): Promise<{ proof_jwt: string }> => (
 					await keystore.generateOpenid4vciProof(await openPrivateData(), cNonce, audience, clientId)
+				),
+
+				generateDeviceResponse: async (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string): Promise<{ deviceResponseMDoc: MDoc }> => (
+					await keystore.generateDeviceResponse(await openPrivateData(), mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri)
 				),
 			};
 		},

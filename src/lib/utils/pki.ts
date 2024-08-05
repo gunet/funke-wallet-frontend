@@ -2,8 +2,8 @@ import { CertificateChainValidationEngine } from "pkijs";
 import * as pkijs from "pkijs";
 import { fromBER } from "asn1js";
 import * as jose from 'jose';
+import { TRUST_ANCHOR_CERTS } from "../../config";
 
-const trustedCerts = process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U ? JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U))) : [];
 
 
 // Assuming `certPEM` is a PEM-encoded certificate string
@@ -38,7 +38,7 @@ export function toPem(b64Cert) {
 
 export async function validateChain(certChain) {
 	const certChainValidationEngine = new CertificateChainValidationEngine({
-		trustedCerts: trustedCerts.map((c) => fromPemToPKIJSCertificate(c)), // Trusted root certificates
+		trustedCerts: TRUST_ANCHOR_CERTS.map((c) => fromPemToPKIJSCertificate(c)), // Trusted root certificates
 		certs: certChain,         // The certificate chain to validate
 	});
 

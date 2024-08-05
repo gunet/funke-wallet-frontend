@@ -13,7 +13,9 @@ import { ClientConfig } from "../lib/types/ClientConfig";
 import { useLocalStorageKeystore } from "../services/LocalStorageKeystore";
 import { StorableCredential } from "../lib/types/StorableCredential";
 import { useApi } from "../api";
-
+import { IOpenID4VPRelyingParty } from "../lib/interfaces/IOpenID4VPRelyingParty";
+import { OpenID4VPRelyingParty } from "../lib/services/OpenID4VPRelyingParty";
+import { MDoc } from "@auth0/mdl";
 
 
 export function useCommunicationProtocols() {
@@ -30,22 +32,40 @@ export function useCommunicationProtocols() {
 	container.register<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository', OpenID4VCIClientStateRepository);
 	container.register<IOpenID4VCIHelper>('OpenID4VCIHelper', OpenID4VCIHelper, container.resolve<IHttpProxy>('HttpProxy'));
 
+	container.register<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty', OpenID4VPRelyingParty,
+		async function getAllStoredVerifiableCredentials() {
+			const fetchAllCredentials = await api.get('/storage/vc');
+			return { verifiableCredentials: fetchAllCredentials.data.vc_list };
+		},
+
+		async function signJwtPresentationKeystoreFn(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }> {
+			return keystore.signJwtPresentation(nonce, audience, verifiableCredentials)
+		},
+
+		async (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => {
+			return keystore.generateDeviceResponse(mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri);
+		}
+	);
+
 	container.register<OpenID4VCIClientFactory>('OpenID4VCIClientFactory', OpenID4VCIClientFactory,
 		container.resolve<IHttpProxy>('HttpProxy'),
 		container.resolve<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository'),
-		async (cNonce: string, audience: string, clientId: string): Promise<{ jws: string }> => {
-			const { proof_jwt } = await keystore.generateOpenid4vciProof(cNonce, audience, clientId)
-			return { jws: proof_jwt };
-		},
-		async (c: StorableCredential) => {
-			await api.post('/storage/vc', {
-				...c
-			});
-		});
+			async (cNonce: string, audience: string, clientId: string): Promise<{ jws: string }> => {
+				const { proof_jwt } = await keystore.generateOpenid4vciProof(cNonce, audience, clientId)
+				return { jws: proof_jwt };
+			},
+			async (c: StorableCredential) => {
+				await api.post('/storage/vc', {
+					...c
+				});
+			},
+	);
 
 
 	const httpProxy = container.resolve<IHttpProxy>('HttpProxy');
 	const helper = container.resolve<IOpenID4VCIHelper>('OpenID4VCIHelper');
+
+	const openID4VPRelyingParty = container.resolve<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty');
 
 	async function initialize() {
 		let open4VCIClientsJson: { [x: string]: IOpenID4VCIClient } = {};
@@ -90,7 +110,8 @@ export function useCommunicationProtocols() {
 		return {
 			openID4VCIClients: openID4VCIClients,
 			openID4VCIHelper: helper,
-			httpProxy: httpProxy
+			httpProxy: httpProxy,
+			openID4VPRelyingParty: openID4VPRelyingParty
 		}
 	}, [openID4VCIClients]);
 }

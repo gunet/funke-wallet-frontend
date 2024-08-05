@@ -19,7 +19,7 @@ const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.
 function useCheckURL(urlToCheck: string): {
 	showSelectCredentialsPopup: boolean,
 	setShowSelectCredentialsPopup: Dispatch<SetStateAction<boolean>>,
-	setSelectionMap: Dispatch<SetStateAction<string | null>>,
+	setSelectionMap: Dispatch<SetStateAction<{ [x: string]: string } | null>>,
 	conformantCredentialsMap: any,
 	showPinInputPopup: boolean,
 	setShowPinInputPopup: Dispatch<SetStateAction<boolean>>,
@@ -30,11 +30,11 @@ function useCheckURL(urlToCheck: string): {
 	typeMessagePopup: string;
 } {
 	const api = useApi();
-	const { openID4VCIClients, httpProxy } = useCommunicationProtocols();
+	const { openID4VCIClients, openID4VPRelyingParty } = useCommunicationProtocols();
 	const isLoggedIn: boolean = api.isLoggedIn();
 	const [showSelectCredentialsPopup, setShowSelectCredentialsPopup] = useState<boolean>(false);
 	const [showPinInputPopup, setShowPinInputPopup] = useState<boolean>(false);
-	const [selectionMap, setSelectionMap] = useState<string | null>(null);
+	const [selectionMap, setSelectionMap] = useState<{ [x: string]: string } | null>(null);
 	const [conformantCredentialsMap, setConformantCredentialsMap] = useState(null);
 	const [verifierDomainName, setVerifierDomainName] = useState("");
 	const [showMessagePopup, setMessagePopup] = useState<boolean>(false);
@@ -114,6 +114,7 @@ function useCheckURL(urlToCheck: string): {
 				})
 			}
 		}
+
 		if (u.searchParams.get('code')) {
 			for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
@@ -124,44 +125,59 @@ function useCheckURL(urlToCheck: string): {
 					});
 			}
 		}
-
-		if (urlToCheck && isLoggedIn && window.location.pathname === "/cb") {
-			(async () => {
-				await communicationHandler(urlToCheck);
-			})();
-		}
+		openID4VPRelyingParty.handleAuthorizationRequest(urlToCheck).then((result) => {
+			if ('err' in result) {
+				if (result.err == "INSUFFICIENT_CREDENTIALS") {
+					setTextMessagePopup({ title: `${t('messagePopup.insufficientCredentials.title')}`, description: `${t('messagePopup.insufficientCredentials.description')}` });
+					setTypeMessagePopup('error');
+					setMessagePopup(true);
+				}
+				return;
+			}
+			const { conformantCredentialsMap, verifierDomainName } = result;
+			const jsonedMap = Object.fromEntries(conformantCredentialsMap);
+			setVerifierDomainName(verifierDomainName);
+			setConformantCredentialsMap(jsonedMap);
+			setShowSelectCredentialsPopup(true);
+		}).catch(err => {
+			console.log("Failed to handle authorization req");
+			console.error(err)
+		})
 
 	}, [api, keystore, t, urlToCheck, isLoggedIn, openID4VCIClients]);
 
 	useEffect(() => {
 		if (selectionMap) {
-			console.log("Selected value = ", selectionMap);
+			openID4VPRelyingParty.sendAuthorizationResponse(new Map(Object.entries(selectionMap))).then(({ url }) => {
+				if (url) {
+					window.location.href = url;
+				}
+			}).catch((err) => console.error(err));
+			// api.post("/communication/handle",
+			// 	{ verifiable_credentials_map: selectionMap },
+			// ).then(success => {
+			// 	console.log(success);
+			// 	const { redirect_to, error } = success.data;
 
-			api.post("/communication/handle",
-				{ verifiable_credentials_map: selectionMap },
-			).then(success => {
-				console.log(success);
-				const { redirect_to, error } = success.data;
-
-				if (error && error === SendResponseError.SEND_RESPONSE_ERROR) {
-					setTextMessagePopup({ title: `${t('messagePopup.sendResponseError.title')}`, description: `${t('messagePopup.sendResponseError.description')}` });
-					setTypeMessagePopup('error');
-					setMessagePopup(true);
-					return;
-				}
-				if (redirect_to) {
-					window.location.href = redirect_to; // Navigate to the redirect URL
-				}
-				else {
-					setTextMessagePopup({ title: `${t('messagePopup.sendResponseSuccess.title')}`, description: `${t('messagePopup.sendResponseSuccess.description')}` });
-					setTypeMessagePopup('success');
-					setMessagePopup(true);
-					return;
-				}
-			}).catch(err => {
-				console.error("Error");
-				console.error(err);
-			});
+			// 	if (error && error === SendResponseError.SEND_RESPONSE_ERROR) {
+			// 		setTextMessagePopup({ title: `${t('messagePopup.sendResponseError.title')}`, description: `${t('messagePopup.sendResponseError.description')}` });
+			// 		setTypeMessagePopup('error');
+			// 		setMessagePopup(true);
+			// 		return;
+			// 	}
+			// 	if (redirect_to) {
+			// 		window.location.href = redirect_to; // Navigate to the redirect URL
+			// 	}
+			// 	else {
+			// 		setTextMessagePopup({ title: `${t('messagePopup.sendResponseSuccess.title')}`, description: `${t('messagePopup.sendResponseSuccess.description')}` });
+			// 		setTypeMessagePopup('success');
+			// 		setMessagePopup(true);
+			// 		return;
+			// 	}
+			// }).catch(err => {
+			// 	console.error("Error");
+			// 	console.error(err);
+			// });
 		}
 	}, [api, keystore, selectionMap, t]);
 

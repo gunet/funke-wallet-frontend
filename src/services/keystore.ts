@@ -7,10 +7,12 @@ import { Resolver } from 'did-resolver'
 import { v4 as uuidv4 } from "uuid";
 import * as util from '@cef-ebsi/key-did-resolver/dist/util.js';
 import { SignVerifiablePresentationJWT } from "@wwwallet/ssi-sdk";
-
 import * as config from '../config';
 import type { DidKeyVersion } from '../config';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary, toBase64Url } from "../util";
+import { DeviceResponse, MDoc } from "@auth0/mdl";
+import { generateRandomIdentifier } from "../lib/utils/generateRandomIdentifier";
+import { SupportedAlgs } from "@auth0/mdl/lib/mdoc/model/types";
 
 
 const keyDidResolver = KeyDidResolver.getResolver();
@@ -1044,4 +1046,18 @@ export async function generateOpenid4vciProof([privateData, sessionKey]: [Privat
 		})
 		.sign(privateKey);
 	return { proof_jwt: proof };
+}
+
+export async function generateDeviceResponse([privateData, sessionKey]: [PrivateData, CryptoKey], mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string): Promise<{ deviceResponseMDoc: MDoc }> {
+	const { wrappedPrivateKey, alg } = privateData;
+	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, sessionKey, true);
+
+	const privateKeyJwk = await crypto.subtle.exportKey("jwk", privateKey);
+	console.log("Private key JWK = ", privateKeyJwk)
+	const deviceResponseMDoc = await DeviceResponse.from(mdocCredential)
+		.usingPresentationDefinition(presentationDefinition)
+		.usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])
+		.authenticateWithSignature({...privateKeyJwk, alg} as JWK, alg as 'ES256')
+		.sign();
+	return { deviceResponseMDoc };
 }

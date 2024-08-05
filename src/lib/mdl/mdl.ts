@@ -29,7 +29,7 @@ export const verifyMdocWithAllCerts = async (mdoc: MDoc) => {
 	}
 }
 
-export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: string): Promise<any> => {
+export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: string): Promise<MDoc> => {
 
 	const credentialBytes = jose.base64url.decode(mso_mdoc_cred);
 	const issuerSigned = await cbor.decode(credentialBytes);

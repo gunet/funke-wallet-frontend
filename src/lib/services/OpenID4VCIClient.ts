@@ -10,6 +10,7 @@ import { generateDPoP } from '../utils/dpop';
 import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
 import { StorableCredential } from '../types/StorableCredential';
 import * as jose from 'jose';
+import { generateRandomIdentifier } from '../utils/generateRandomIdentifier';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
 
@@ -193,6 +194,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
 			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
 				await this.storeCredential({
+					credentialIdentifier: generateRandomIdentifier(32),
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
 					vct: flowState.selectedCredentialConfiguration.vct,
@@ -200,6 +202,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			}
 			else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
 				await this.storeCredential({
+					credentialIdentifier: generateRandomIdentifier(32),
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
 					doctype: flowState.selectedCredentialConfiguration.doctype,
