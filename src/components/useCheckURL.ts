@@ -1,8 +1,9 @@
-import { useEffect, useState, Dispatch, SetStateAction } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction, useContext } from 'react';
 import { useApi } from '../api';
 import { useLocalStorageKeystore } from '../services/LocalStorageKeystore';
 import { useTranslation } from 'react-i18next';
 import { useCommunicationProtocols } from './useCommunicationProtocols';
+import SessionContext from '../context/SessionContext';
 
 export enum HandleOutboundRequestError {
 	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
@@ -30,8 +31,8 @@ function useCheckURL(urlToCheck: string): {
 	typeMessagePopup: string;
 } {
 	const api = useApi();
-	const { openID4VCIClients, openID4VPRelyingParty } = useCommunicationProtocols();
-	const isLoggedIn: boolean = api.isLoggedIn();
+	const { openID4VCIClients, httpProxy, openID4VPRelyingParty } = useCommunicationProtocols();
+	const { isLoggedIn } = useContext(SessionContext);
 	const [showSelectCredentialsPopup, setShowSelectCredentialsPopup] = useState<boolean>(false);
 	const [showPinInputPopup, setShowPinInputPopup] = useState<boolean>(false);
 	const [selectionMap, setSelectionMap] = useState<{ [x: string]: string } | null>(null);

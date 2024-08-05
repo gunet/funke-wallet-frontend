@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaExclamationTriangle, FaEye, FaEyeSlash, FaInfoCircle, FaLock, FaUser } from 'react-icons/fa';
 import { GoPasskeyFill, GoTrash } from 'react-icons/go';
@@ -17,6 +17,7 @@ import { PiWifiHighBold, PiWifiSlashBold } from "react-icons/pi";
 // import LanguageSelector from '../../components/LanguageSelector/LanguageSelector'; // Import the LanguageSelector component
 import * as CheckBrowserSupport from '../../components/BrowserSupport';
 import SeparatorLine from '../../components/SeparatorLine';
+import SessionContext from '../../context/SessionContext';
 
 
 const FormInputRow = ({
@@ -35,12 +36,12 @@ const FormInputRow = ({
 );
 
 const PasswordCriterionMessage = ({ text, ok }) => (
-	<p className={ok ? "text-green-500" : "text-red-500"}>
-		<span className="text-sm">
+	<div className={ok ? "text-green-500" : "text-red-500"}>
+		<p className="text-sm">
 			<AiOutlineUnlock className="inline-block mr-2" />
 			{text}
-		</span>
-	</p>
+		</p>
+	</div>
 );
 
 const FormInputField = ({
@@ -470,6 +471,7 @@ const WebauthnSignupLogin = ({
 
 const Login = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { isLoggedIn } = useContext(SessionContext);
 	const api = useApi(isOnline);
 	const { t } = useTranslation();
 	const location = useLocation();
@@ -485,15 +487,16 @@ const Login = () => {
 	const [isLogin, setIsLogin] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isContentVisible, setIsContentVisible] = useState(false);
+	const nodeRef = useRef(null);
 
 	const navigate = useNavigate();
 	const keystore = useLocalStorageKeystore();
 
 	useEffect(() => {
-		if (api.isLoggedIn()) {
+		if (isLoggedIn) {
 			navigate('/');
 		}
-	}, [api, navigate]);
+	}, [isLoggedIn, navigate]);
 
 	const { username, password, confirmPassword } = formData;
 
@@ -592,9 +595,9 @@ const Login = () => {
 	return (
 		<section className="bg-gray-100 dark:bg-gray-900 h-full">
 
-			<CSSTransition in={isContentVisible} timeout={400} classNames="content-fade-in">
+			<CSSTransition in={isContentVisible} timeout={400} classNames="content-fade-in" nodeRef={nodeRef}>
 				<>
-					<div className='h-max min-h-screen'>
+					<div ref={nodeRef} className='h-max min-h-screen'>
 						<div className="flex flex-col items-center justify-center px-6 py-8 mx-auto min-h-[95vh]">
 							<a href="/" className="flex justify-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
 								<img className="w-40" src={logo} alt="logo" />
@@ -614,9 +617,9 @@ const Login = () => {
 								{/* <div className="absolute top-2 right-2">
 							<LanguageSelector />
 						</div> */}
-								<CheckBrowserSupport.Ctx>
+								{/* <CheckBrowserSupport.Ctx>
 									<CheckBrowserSupport.If test={(ctx) => !ctx.showWarningPortal}>
-										<p className="text-sm font-light text-gray-500 dark:text-gray-200 italic mb-2">
+										<div className="text-sm font-light text-gray-500 dark:text-gray-200 italic mb-2">
 											<CheckBrowserSupport.If test={(ctx) => ctx.browserSupported}>
 												<FaInfoCircle className="text-md inline-block text-gray-500 mr-2" />
 												<Trans
@@ -659,9 +662,9 @@ const Login = () => {
 													}}
 												/>
 											</CheckBrowserSupport.If>
-										</p>
+										</div>
 									</CheckBrowserSupport.If>
-								</CheckBrowserSupport.Ctx>
+								</CheckBrowserSupport.Ctx> */}
 								<div className="relative p-6 space-y-4 md:space-y-6 sm:p-8 bg-white rounded-lg shadow dark:bg-gray-800">
 									<CheckBrowserSupport.WarningPortal>
 										<h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl text-center dark:text-white">
