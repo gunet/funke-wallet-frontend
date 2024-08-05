@@ -131,7 +131,11 @@ const Issuers = () => {
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
 			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
-			const userHandleB64u  = keystore.getUserHandleB64u();
+			const userHandleB64u = keystore.getUserHandleB64u();
+			if (userHandleB64u == null) {
+				console.error("Could not generate authorization request because user handle is null");
+				return;
+			}
 			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
 				console.log("Request uri = ", request_uri)
 				const urlObj = new URL(url);
