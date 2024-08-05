@@ -220,7 +220,7 @@ const Issuers = () => {
 					handleContinue={handleContinue}
 					availableCredentialConfigurations={availableCredentialConfigurations}
 					popupTitle={`${t('pageAddCredentials.popup.title')} ${selectedIssuer?.selectedDisplay.name}`}
-					popupMessage={`${t('pageAddCredentials.popup.messagePart1')} ${selectedIssuer?.selectedDisplay.name}${t('pageAddCredentials.popup.messagePart2')}`}
+					popupMessage={t('pageAddCredentials.popup.message', { issuerName: selectedIssuer?.selectedDisplay.name })}
 				/>
 			)}
 
