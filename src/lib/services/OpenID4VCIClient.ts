@@ -35,7 +35,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 	}
 
 
-	async handleCredentialOffer(credentialOfferURL: string): Promise<{ url: string; client_id: string; request_uri: string; }> {
+	async handleCredentialOffer(credentialOfferURL: string): Promise<{ credentialIssuer: string, selectedCredentialConfigurationSupported: CredentialConfigurationSupported; }> {
 		const parsedUrl = new URL(credentialOfferURL);
 		const offer = CredentialOfferSchema.parse(JSON.parse(parsedUrl.searchParams.get("credential_offer")));
 
@@ -47,7 +47,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		if (!selectedConfiguration) {
 			throw new Error("Credential configuration not found");
 		}
-		return this.generateAuthorizationRequest(selectedConfiguration);
+		return { credentialIssuer: offer.credential_issuer, selectedCredentialConfigurationSupported: selectedConfiguration };
 	}
 
 	async getAvailableCredentialConfigurations(): Promise<Record<string, CredentialConfigurationSupported>> {
@@ -57,7 +57,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		return this.config.credentialIssuerMetadata.credential_configurations_supported
 	}
 
-	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported, userHandleB64u: string = ""): Promise<{ url: string; client_id: string; request_uri: string; }> {
+	async generateAuthorizationRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported, userHandleB64u: string): Promise<{ url: string; client_id: string; request_uri: string; }> {
 		const { code_challenge, code_verifier } = await pkce();
 
 		const formData = new URLSearchParams();

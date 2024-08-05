@@ -95,7 +95,12 @@ function useCheckURL(urlToCheck: string): {
 		if (u.protocol == 'openid-credential-offer' || u.searchParams.get('credential_offer')) {
 			for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
-				openID4VCIClients[credentialIssuerIdentifier].handleCredentialOffer(u.toString()).then(({ url, client_id, request_uri }) => {
+				openID4VCIClients[credentialIssuerIdentifier].handleCredentialOffer(u.toString())
+					.then(({ credentialIssuer, selectedCredentialConfigurationSupported }) => {
+						const userHandleB64u  = keystore.getUserHandleB64u();
+						return openID4VCIClients[credentialIssuerIdentifier].generateAuthorizationRequest(selectedCredentialConfigurationSupported, userHandleB64u);
+					})
+					.then(({ url, client_id, request_uri }) => {
 					console.log("Request uri = ", request_uri)
 					const urlObj = new URL(url);
 					// Construct the base URL
