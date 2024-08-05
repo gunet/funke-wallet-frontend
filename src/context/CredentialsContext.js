@@ -2,6 +2,7 @@ import React, { createContext, useState, useCallback, useContext } from 'react';
 import { useApi } from '../api';
 import { extractCredentialFriendlyName } from '../functions/extractCredentialFriendlyName';
 import OnlineStatusContext from '../context/OnlineStatusContext';
+import { useCommunicationProtocols } from '../components/useCommunicationProtocols';
 
 const CredentialsContext = createContext();
 
@@ -11,12 +12,13 @@ export const CredentialsProvider = ({ children }) => {
 	const [vcEntityList, setVcEntityList] = useState([]);
 	const [latestCredentials, setLatestCredentials] = useState(new Set());
 
+	const protocols = useCommunicationProtocols();
 	const getData = useCallback(async () => {
 		try {
 			const response = await api.get('/storage/vc');
 			const fetchedVcList = response.data.vc_list;
 			const vcEntityList = await Promise.all(fetchedVcList.map(async vcEntity => {
-				const name = await extractCredentialFriendlyName(vcEntity.credential);
+				const name = await extractCredentialFriendlyName(vcEntity);
 				return { ...vcEntity, friendlyName: name };
 			}));
 			vcEntityList.sort((vcA, vcB) => new Date(vcB.issuanceDate) - new Date(vcA.issuanceDate));
@@ -37,7 +39,7 @@ export const CredentialsProvider = ({ children }) => {
 		} catch (error) {
 			console.error('Failed to fetch data', error);
 		}
-	}, [api]);
+	}, [api, protocols]);
 
 	return (
 		<CredentialsContext.Provider value={{ vcEntityList, latestCredentials, getData }}>

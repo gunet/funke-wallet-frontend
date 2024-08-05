@@ -20,7 +20,7 @@
 		"save": "Save",
 		"submit": "Submit",
 		"tryAgain": "Try again",
-		"walletName": "wwWallet"
+		"walletName": "Funke Wallet"
 	},
 	"browserSupportWarningPortal": {
 		"continueAnyway": "Continue anyway",
@@ -45,7 +45,7 @@
 		"confirm": "Confirm",
 		"message": "Use your <strong>passkey</strong> to continue and fetch your credential in your wallet.",
 		"title": "Hi,",
-		"welcomeBackMessage": "Welcome back to <highlight>wwWallet</highlight>"
+		"welcomeBackMessage": "Welcome back to <highlight>Funke Wallet</highlight>"
 	},
 	"loginSignup": {
 		"alreadyHaveAccountQuestion": "Already have an account? ",
@@ -62,7 +62,7 @@
 		"incorrectCredentialsError": "Incorrect username or password",
 		"infoAboutTimeAndLocation": "Make sure that your date/time settings and timezone are correctly set and accurate.",
 		"learnMoreAboutPrfCompatibility": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support.</docLinkPrf>",
-		"learnMoreAboutPrfCompatibilityLaunchpadAndScenarios": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support</docLinkPrf> and discover wwWallet via our <docLinkLaunchpad>Launchpad</docLinkLaunchpad> and <docLinkScenarios>Sample Scenarios</docLinkScenarios> ",
+		"learnMoreAboutPrfCompatibilityLaunchpadAndScenarios": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support</docLinkPrf> and discover Funke Wallet via our <docLinkLaunchpad>Launchpad</docLinkLaunchpad> and <docLinkScenarios>Sample Scenarios</docLinkScenarios> ",
 		"learnMoreAboutPrfCompatibilityAriaLabel": "Learn more about PRF Compatibility regarding browser/OS support",
 		"learnMoreAboutLaunchpadAriaLabel": "Discover our Launchpad",
 		"learnMoreAboutScenariosAriaLabel": "Learn more about sample scenarios",
@@ -105,7 +105,7 @@
 		"usernameExistsError": "Failed to create user account, username already exists",
 		"usernameLabel": "Username",
 		"weakPasswordError": "Weak password",
-		"welcomeMessage": "Welcome to <highlight>wwWallet</highlight>"
+		"welcomeMessage": "Welcome to <highlight>Funke Wallet</highlight>"
 	},
 	"messagePopup": {
 		"close": "Close",
@@ -276,9 +276,9 @@
 		"closeTourButton": "Close Tour"
 	},
 	"welcomeModal": {
-		"title": "Welcome to wwWallet!",
+		"title": "Welcome to Funke Wallet!",
 		"description": "Discover the <strong> {{walletName}} </strong>, your ultimate tool for managing digital credentials. Effortlessly view, get, present and keep track of all your credentials!",
-		"question": "Are you ready to explore the features of wwWallet through a guided tour?",
+		"question": "Are you ready to explore the features of Funke Wallet through a guided tour?",
 		"dismissButton": "Dismiss",
 		"startTourButton": "Start Tour"
 	}

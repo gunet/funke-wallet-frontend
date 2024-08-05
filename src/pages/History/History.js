@@ -14,12 +14,13 @@ import { formatDate } from '../../functions/DateFormat';
 import { base64url } from 'jose';
 import { CredentialImage } from '../../components/Credentials/CredentialImage';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
+import { JSONPath } from 'jsonpath-plus';
 
 const History = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
 	const api = useApi(isOnline);
 	const [history, setHistory] = useState([]);
-	const [matchingCredentials, setMatchingCredentials] = useState([]);
+	const [matchingCredentials, setMatchingCredentials] = useState([]); // an array of StorableCredential objects
 	const [isImageModalOpen, setImageModalOpen] = useState(false);
 
 	const [currentSlide, setCurrentSlide] = useState(1);
@@ -49,10 +50,20 @@ const History = () => {
 			base64url.decode(item.presentation.split('.')[1])
 		));
 
-		const verifiableCredentials = vpTokenPayload.vp.verifiableCredential; // in raw format
+		const vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
+			const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
+			console.log("FOUND = ", findCredentialByPath)
+			if (!findCredentialByPath) {
+				throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
+			}
+			return {
+				format: format,
+				credential: findCredentialByPath,
+			}
+		})
 
 		// Set matching credentials and show the popup
-		setMatchingCredentials(verifiableCredentials);
+		setMatchingCredentials(vcEntities);
 		setImageModalOpen(true);
 	};
 
@@ -65,11 +76,7 @@ const History = () => {
 				const vpListFromApi = fetchedPresentations.vp_list
 					.sort((vpA, vpB) => vpB.issuanceDate - vpA.issuanceDate)
 					.map((item) => ({
-						id: item.id,
-						presentation: item.presentation,
-						// ivci: item.includedVerifiableCredentialIdentifiers,
-						audience: item.audience,
-						issuanceDate: item.issuanceDate,
+						...item
 					}));
 
 				setHistory(vpListFromApi);
