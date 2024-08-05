@@ -26,7 +26,7 @@ const hasherAndAlgorithm: HasherAndAlgorithm = {
 	algorithm: HasherAlgorithm.Sha256
 }
 
-export const parseCredential = async (credential: StorableCredential): Promise<object> => {
+export const parseCredential = async (credential: StorableCredential, validate: boolean = false): Promise<object> => {
 
 	const verifierCb: Verifier = async ({ header, message, signature }) => {
 		if (header.alg && header.alg !== SignatureAndEncryptionAlgorithm.ES256) {
@@ -38,10 +38,14 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 	}
 
 	if (credential.format == VerifiableCredentialFormat.SD_JWT_VC) { // is SD-JWT
-		const verificationResult = await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
-			.withHasher(hasherAndAlgorithm)
-			.verify(verifierCb);
-		console.log("SD Verification result = ", verificationResult)
+		if (validate) {
+			const verificationResult = await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
+				.withHasher(hasherAndAlgorithm)
+				.verify(verifierCb);
+			if (!verificationResult.isValid) {
+				throw new Error("SD JWT is not valid");
+			}
+		}
 		return await SdJwt.fromCompact<Record<string, unknown>, any>(credential.credential)
 			.withHasher(hasherAndAlgorithm)
 			.getPrettyClaims()
@@ -50,8 +54,12 @@ export const parseCredential = async (credential: StorableCredential): Promise<o
 
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
 		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype);
-		const result = await verifyMdocWithAllCerts(parsed);
-		console.log("MDOC verification result = ", result)
+		if (validate) {
+			const result = await verifyMdocWithAllCerts(parsed);
+			if (!result) {
+				throw new Error("MDOC verification failed");
+			}
+		}
 		const ns = parsed.documents[0].getIssuerNameSpace(credential.doctype);
 		return convertToJSONWithMaps(ns);
 	}

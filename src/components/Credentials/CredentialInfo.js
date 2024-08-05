@@ -65,13 +65,13 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 	const [parsedCredential, setParsedCredential] = useState(null);
 
 	useEffect(() => {
-		parseCredential(credential).then((c) => {
+		parseCredential(credential, true).then((c) => {
 			setParsedCredential(c);
 		});
-	}, [credential]);
+	}, []);
 
 	useEffect(() => {
-		parseCredential(credential).then((c) => {
+		parseCredential(credential, true).then((c) => {
 			setParsedCredential(c);
 		});
 	}, [credential]);
