@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { useContext, useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useApi } from '../api';
 import { useLocalStorageKeystore } from '../services/LocalStorageKeystore';
 import { fetchToken } from '../firebase';
@@ -7,19 +7,22 @@ import Layout from './Layout';
 import Spinner from './Spinner'; // Import your spinner component
 import { useSessionStorage } from '../components/useStorage';
 import OnlineStatusContext from '../context/OnlineStatusContext';
+import SessionContext from '../context/SessionContext';
 
 const PrivateRoute = ({ children }) => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { isLoggedIn, logout } = useContext(SessionContext);
 	const api = useApi(isOnline);
 	const [isPermissionGranted, setIsPermissionGranted] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const keystore = useLocalStorageKeystore();
-	const isLoggedIn = api.isLoggedIn() && keystore.isOpen();
 	const [tokenSentInSession, setTokenSentInSession,] = api.useClearOnClearSession(useSessionStorage('tokenSentInSession', null));
 	const [latestIsOnlineStatus, setLatestIsOnlineStatus,] = api.useClearOnClearSession(useSessionStorage('latestIsOnlineStatus', null));
+	const cachedUsers = keystore.getCachedUsers();
 
 	const location = useLocation();
-	const navigate = useNavigate();
+	const queryParams = new URLSearchParams(location.search);
+	const state = queryParams.get('state');
 
 	useEffect(() => {
 		const requestNotificationPermission = async () => {
@@ -88,20 +91,8 @@ const PrivateRoute = ({ children }) => {
 	]);
 
 	useEffect(() => {
-		if (!isLoggedIn) {
-			const destination = location.pathname + location.search;
-			navigate('/login', { state: { from: destination } });
-		}
-	}, [isLoggedIn, location, navigate, isOnline]);
-
-	useEffect(() => {
 		if (latestIsOnlineStatus === false && isOnline === true) {
-			const performLogout = async () => {
-				api.clearSession();
-				await keystore.close();
-				window.location.href = '/login';
-			};
-			performLogout();
+			logout();
 		}
 		if (isLoggedIn) {
 			setLatestIsOnlineStatus(isOnline);
@@ -112,13 +103,29 @@ const PrivateRoute = ({ children }) => {
 		api,
 		isLoggedIn,
 		isOnline,
-		keystore,
+		logout,
 		latestIsOnlineStatus,
 		setLatestIsOnlineStatus,
 	]);
 
+
+	const userExistsInCache = (state) => {
+		if (!state) return false;
+		try {
+			const decodedState = JSON.parse(atob(state));
+			return cachedUsers.some(user => user.userHandleB64u === decodedState.userHandleB64u);
+		} catch (error) {
+			console.error('Error decoding state:', error);
+			return false;
+		}
+	};
+
 	if (!isLoggedIn) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
+		if (state && userExistsInCache(state)) {
+			return <Navigate to="/login-state" state={{ from: location }} replace />;
+		} else {
+			return <Navigate to="/login" state={{ from: location }} replace />;
+		}
 	}
 
 	if (loading || tokenSentInSession === null) {

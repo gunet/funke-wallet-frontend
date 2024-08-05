@@ -3,6 +3,7 @@ import { BiSolidCategoryAlt, BiSolidUserCircle } from 'react-icons/bi';
 import { AiFillCalendar } from 'react-icons/ai';
 import { RiPassExpiredFill } from 'react-icons/ri';
 import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice } from 'react-icons/md';
+import { TbRating18Plus } from "react-icons/tb";
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
 import { parseCredential } from '../../functions/parseCredential';
@@ -16,6 +17,8 @@ const getFieldIcon = (fieldName) => {
 			return <RiPassExpiredFill size={25} className="inline mr-1" />;
 		case 'dateOfBirth':
 			return <AiFillCalendar size={25} className="inline mr-1" />;
+		case 'over18':
+			return <TbRating18Plus size={25} className="inline mr-1" />;
 		case 'id':
 			return <MdOutlineNumbers size={25} className="inline mr-1" />;
 		case 'familyName':
@@ -38,6 +41,7 @@ const getFieldIcon = (fieldName) => {
 
 const renderRow = (fieldName, label, fieldValue) => {
 	if (fieldValue) {
+		const isBoolean = typeof fieldValue === 'boolean';
 		return (
 			<tr className="text-left">
 				<td className="font-bold text-primary dark:text-primary-light py-2 px-2 rounded-l-xl">
@@ -46,7 +50,9 @@ const renderRow = (fieldName, label, fieldValue) => {
 						<span className="md:ml-1 flex items-center">{label}:</span>
 					</div>
 				</td>
-				<td className="text-gray-700 dark:text-white py-2 px-2 rounded-r-xl">{fieldValue}</td>
+				<td className="text-gray-700 dark:text-white py-2 px-2 rounded-r-xl">
+					{isBoolean ? (fieldValue ? 'Yes' : 'No') : fieldValue}
+				</td>
 			</tr>
 		);
 	} else {
@@ -86,6 +92,8 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
+							{renderRow('over18', 'Age Over 18', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['18'] : null)}
+							{renderRow('over18', 'Age Over 18', parsedCredential?.age_over_18)}
 						</>
 					)}
 				</tbody>

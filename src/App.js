@@ -10,7 +10,8 @@ import { CredentialsProvider } from './context/CredentialsContext';
 import useCheckURL from './components/useCheckURL'; // Import the custom hook
 import handleServerMessagesGuard from './hoc/handleServerMessagesGuard';
 import HandlerNotification from './components/HandlerNotification';
-import Snowfalling from './components/ChistmasAnimation/Snowfalling'
+import { withSessionContext } from './context/SessionContext';
+import Snowfalling from './components/ChistmasAnimation/Snowfalling';
 
 import Home from './pages/Home/Home';
 import History from './pages/History/History';
@@ -20,6 +21,7 @@ import SendCredentials from './pages/SendCredentials/SendCredentials';
 
 
 const Login = React.lazy(() => import('./pages/Login/Login'));
+const LoginState = React.lazy(() => import('./pages/Login/LoginState'));
 const NotFound = React.lazy(() => import('./pages/NotFound/NotFound'));
 const PrivateRoute = React.lazy(() => import('./components/PrivateRoute'));
 const CredentialDetail = React.lazy(() => import('./pages/Home/CredentialDetail'));
@@ -74,6 +76,7 @@ function App() {
 						<HandlerNotification />
 						<Routes>
 							<Route path="/login" element={<Login />} />
+							<Route path="/login-state" element={<LoginState />} />
 							<Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
 							<Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
 							<Route path="/credential/:id" element={<PrivateRoute><CredentialDetail /></PrivateRoute>} />
@@ -100,4 +103,4 @@ function App() {
 	);
 }
 
-export default handleServerMessagesGuard(App);
+export default withSessionContext(handleServerMessagesGuard(App));
