@@ -31,7 +31,7 @@
 
 "@auth0/mdl@./auth0-mdl-v0.3.0-wwwallet-build.tgz":
   version "0.3.0-wwwallet-build"
-  resolved "./auth0-mdl-v0.3.0-wwwallet-build.tgz#5f941d566338f7130300626b923f99465822abcf"
+  resolved "./auth0-mdl-v0.3.0-wwwallet-build.tgz#d1dca67765eef88f3dc85f770b104a2fb6a3e890"
   dependencies:
     "@noble/curves" "^1.2.0"
     "@panva/hkdf" "^1.1.1"
