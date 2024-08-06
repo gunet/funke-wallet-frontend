@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BiSolidCategoryAlt, BiSolidUserCircle } from 'react-icons/bi';
 import { AiFillCalendar } from 'react-icons/ai';
-import { RiPassExpiredFill } from 'react-icons/ri';
+import { RiPassExpiredFill, RiPassValidFill } from 'react-icons/ri';
 import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice } from 'react-icons/md';
 import { TbRating18Plus } from "react-icons/tb";
 import { GiLevelEndFlag } from 'react-icons/gi';
@@ -15,6 +15,8 @@ const getFieldIcon = (fieldName) => {
 			return <BiSolidCategoryAlt size={25} className="inline mr-1" />;
 		case 'expdate':
 			return <RiPassExpiredFill size={25} className="inline mr-1" />;
+		case 'issuanceDate':
+			return <RiPassValidFill size={25} className="inline mr-1" />;
 		case 'dateOfBirth':
 			return <AiFillCalendar size={25} className="inline mr-1" />;
 		case 'over18':
@@ -82,16 +84,21 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 				<tbody className="divide-y-4 divide-transparent">
 					{parsedCredential && (
 						<>
-							{renderRow('expdate', 'Expiration', formatDate(parsedCredential?.exp))}
+							{parsedCredential?.issuance_date && renderRow('issuanceDate', 'Issuance', formatDate(parsedCredential?.issuance_date))}
+							{parsedCredential?.iat && renderRow('issuanceDate', 'Issuance', formatDate(parsedCredential?.iat))}
+							{parsedCredential?.exp && renderRow('expdate', 'Expiration', formatDate(parsedCredential?.exp))}
+							{parsedCredential?.expiry_date && renderRow('expdate', 'Expiration', formatDate(parsedCredential?.expiry_date))}
 							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
 							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
+							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.birth_place)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
 							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
+							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birth_date)}
 							{renderRow('over18', 'Age Over 18', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['18'] : null)}
 							{renderRow('over18', 'Age Over 18', parsedCredential?.age_over_18)}
 						</>
