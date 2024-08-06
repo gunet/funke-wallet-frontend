@@ -66,6 +66,7 @@ export interface LocalStorageKeystore {
 	): Promise<[CryptoKey, WrappedKeyInfo]>,
 	upgradePrfKey(prfKeyInfo: WebauthnPrfEncryptionKeyInfo, promptForPrfRetry: () => Promise<boolean | AbortSignal>): Promise<[EncryptedContainer, CommitCallback]>,
 	getCachedUsers(): CachedUser[],
+	getUserHandleB64u(): string | null,
 	forgetCachedUser(user: CachedUser): void,
 
 	createIdToken(nonce: string, audience: string): Promise<{ id_token: string; }>,
@@ -317,7 +318,7 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 								const [passwordKey, passwordKeyInfo] = await keystore.getPasswordKey(privateDataCache, password);
 								return [passwordKey, keystore.isAsymmetricPasswordKeyInfo(passwordKeyInfo) ? passwordKeyInfo : passwordKeyInfo.mainKey];
 							} catch {
-								return Promise.reject({ errorId: "passwordUnlockFailed" });
+								throw new Error("Failed to unlock key store", { cause: { errorId: "passwordUnlockFailed" } });
 							}
 						}
 
@@ -351,7 +352,7 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 					return [...(cachedUsers || [])];
 				},
 
-				getUserHandleB64u: (): string => {
+				getUserHandleB64u: (): string | null => {
 					return (userHandleB64u);
 				},
 

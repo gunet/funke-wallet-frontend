@@ -391,7 +391,7 @@ export function useApi(isOnline: boolean = true): BackendApi {
 										credential: {
 											type: credential.type,
 											id: credential.id,
-											rawId: credential.id,
+											rawId: credential.id, // SimpleWebauthn on server side expects this base64url encoded
 											response: {
 												authenticatorData: toBase64Url(response.authenticatorData),
 												clientDataJSON: toBase64Url(response.clientDataJSON),
@@ -527,7 +527,7 @@ export function useApi(isOnline: boolean = true): BackendApi {
 									credential: {
 										type: credential.type,
 										id: credential.id,
-										rawId: credential.id,
+										rawId: credential.id, // SimpleWebauthn on server side expects this base64url encoded
 										response: {
 											attestationObject: toBase64Url(response.attestationObject),
 											clientDataJSON: toBase64Url(response.clientDataJSON),
@@ -545,9 +545,9 @@ export function useApi(isOnline: boolean = true): BackendApi {
 							}
 
 						} catch (e) {
-							if (e?.errorId === "prf_retry_failed") {
+							if (e?.cause?.errorId === "prf_retry_failed") {
 								return Err({ errorId: 'prfRetryFailed', retryFrom: { credential, beginData } });
-							} else if (e?.errorId === "prf_not_supported") {
+							} else if (e?.cause?.errorId === "prf_not_supported") {
 								return Err('passkeySignupPrfNotSupported');
 							} else {
 								return Err('passkeySignupKeystoreFailed');

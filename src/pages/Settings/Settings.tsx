@@ -171,7 +171,7 @@ const WebauthnRegistation = ({
 					credential: {
 						type: pendingCredential.type,
 						id: pendingCredential.id,
-						rawId: pendingCredential.id,
+						rawId: pendingCredential.id, // SimpleWebauthn on server side expects this base64url encoded
 						response: {
 							attestationObject: toBase64Url(pendingCredential.response.attestationObject),
 							clientDataJSON: toBase64Url(pendingCredential.response.clientDataJSON),
@@ -353,7 +353,7 @@ const UnlockMainKey = ({
 				onUnlock(unwrappingKey, wrappedMainKey);
 			} catch (e) {
 				// Using a switch here so the t() argument can be a literal, to ease searching
-				switch (e.errorId) {
+				switch (e?.cause?.errorId) {
 					case 'passkeyInvalid':
 						setError(t('passkeyInvalid'));
 						break;
@@ -657,9 +657,11 @@ const WebauthnCredentialItem = ({
 					onConfirm={handleDelete}
 					onCancel={closeDeleteConfirmation}
 					message={
-						<span>
-							{t("pageSettings.passkeyItem.messageDeletePasskeyPart1")} <strong>{nickname}</strong> {t("pageSettings.passkeyItem.messageDeletePasskeyPart2")}
-						</span>
+						<Trans
+							i18nKey="pageSettings.passkeyItem.messageDeletePasskey"
+							values={{ nickname: nickname }}
+							components={{ strong: <strong /> }}
+						/>
 					}
 					loading={loading}
 				/>
@@ -691,7 +693,9 @@ const Settings = () => {
 	const deleteAccount = async () => {
 		try {
 			await api.del('/user/session');
-			const cachedUser = keystore.getCachedUsers().filter((cachedUser) => cachedUser.displayName === userData.displayName)[0];
+			const userHandleB64u = new TextEncoder().encode(userData.webauthnUserHandle);
+			const cachedUser = keystore.getCachedUsers()
+				.find((cachedUser) => cachedUser.userHandleB64u === toBase64Url(userHandleB64u));
 			if (cachedUser) {
 				keystore.forgetCachedUser(cachedUser);
 			}
@@ -919,9 +923,10 @@ const Settings = () => {
 					onConfirm={handleDelete}
 					onCancel={closeDeleteConfirmation}
 					message={
-						<span>
-							{t('pageSettings.deleteAccount.messageDeleteAccount1')} <strong> {t('pageSettings.deleteAccount.messageDeleteAccount2')} </strong>?
-						</span>
+						<Trans
+							i18nKey="pageSettings.deleteAccount.message"
+							components={{ strong: <strong /> }}
+						/>
 					}
 					loading={loading}
 				/>
