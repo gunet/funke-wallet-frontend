@@ -7,7 +7,6 @@ import { TbRating18Plus } from "react-icons/tb";
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
 import { parseCredential } from '../../functions/parseCredential';
-import { useCommunicationProtocols } from '../useCommunicationProtocols';
 
 const getFieldIcon = (fieldName) => {
 	switch (fieldName) {
