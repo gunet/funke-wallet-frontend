@@ -111,12 +111,10 @@ export function useCommunicationProtocols() {
 		});
 	}, [])
 
-	return useMemo(() => {
-		return {
-			openID4VCIClients: openID4VCIClients,
-			openID4VCIHelper: helper,
-			httpProxy: httpProxy,
-			openID4VPRelyingParty: openID4VPRelyingParty
-		}
-	}, [openID4VCIClients]);
+	return {
+		openID4VCIClients: openID4VCIClients,
+		openID4VCIHelper: helper,
+		httpProxy: httpProxy,
+		openID4VPRelyingParty: openID4VPRelyingParty
+	}
 }
