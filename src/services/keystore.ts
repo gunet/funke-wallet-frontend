@@ -1053,7 +1053,6 @@ export async function generateDeviceResponse([privateData, sessionKey]: [Private
 	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, sessionKey, true);
 
 	const privateKeyJwk = await crypto.subtle.exportKey("jwk", privateKey);
-	console.log("Private key JWK = ", privateKeyJwk)
 	const deviceResponseMDoc = await DeviceResponse.from(mdocCredential)
 		.usingPresentationDefinition(presentationDefinition)
 		.usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])

@@ -1,4 +1,4 @@
-import { MDoc } from "@auth0/mdl";
+import { MDoc, parse } from "@auth0/mdl";
 import { IOpenID4VPRelyingParty } from "../interfaces/IOpenID4VPRelyingParty";
 import axios from "axios";
 import { StorableCredential } from "../types/StorableCredential";
@@ -10,22 +10,18 @@ import { convertToJSONWithMaps, parseMsoMdocCredential } from "../mdl/mdl";
 import { JSONPath } from "jsonpath-plus";
 import { generateRandomIdentifier } from "../utils/generateRandomIdentifier";
 import { base64url } from "jose";
+import { OpenID4VPRelyingPartyState } from "../types/OpenID4VPRelyingPartyState";
+import { OpenID4VPRelyingPartyStateRepository } from "./OpenID4VPRelyingPartyStateRepository";
 
 export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
-	private getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>;
-	private signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>;
-	private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>;
 
 	constructor(
-		getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>,
-		signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>,
-		generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>
-	) {
-		this.getAllStoredVerifiableCredentials = getAllStoredVerifiableCredentials;
-		this.signJwtPresentationKeystoreFn = signJwtPresentationKeystoreFn;
-		this.generateDeviceResponseFn = generateDeviceResponseFn;
-	}
+		private openID4VPRelyingPartyStateRepository: OpenID4VPRelyingPartyStateRepository,
+		private getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>,
+		private signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>,
+		private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>
+	) { }
 
 
 	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" }> {
@@ -37,17 +33,26 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		const response_uri = authorizationRequest.searchParams.get('response_uri');
 		const scope = authorizationRequest.searchParams.get('scope');
 		const nonce = authorizationRequest.searchParams.get('nonce');
-		const state = authorizationRequest.searchParams.get('state');
+		const state = authorizationRequest.searchParams.get('state') as string;
 		const presentation_definition_uri = authorizationRequest.searchParams.get('presentation_definition_uri');
 
 		const [presentationDefinitionFetch, vcList] = await Promise.all([axios.get(presentation_definition_uri), this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials)]);
 
 		const presentationDefinition = presentationDefinitionFetch.data;
 
-		localStorage.setItem("presentationDefinition", JSON.stringify(presentationDefinition)); // will change
-		localStorage.setItem("nonce", nonce);
-		localStorage.setItem("response_uri", response_uri);
-		localStorage.setItem("state", state);
+		console.log("Stored definition = ", presentationDefinition)
+		await this.openID4VPRelyingPartyStateRepository.store(new OpenID4VPRelyingPartyState(
+			presentationDefinition,
+			nonce,
+			response_uri,
+			client_id,
+			state
+		));
+		// localStorage.setItem("presentationDefinition", JSON.stringify(presentationDefinition)); // will change
+		// localStorage.setItem("nonce", nonce);
+		// localStorage.setItem("response_uri", response_uri);
+		// localStorage.setItem("client_id", client_id);
+		// localStorage.setItem("state", state);
 
 		const mapping = new Map<string, { credentials: string[], requestedFields: string[] }>();
 		for (const descriptor of presentationDefinition.input_descriptors) {
@@ -66,9 +71,9 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 						const ns = parsed.documents[0].getIssuerNameSpace(vc.doctype);
 						const json = {};
 						json[vc.doctype] = ns;
-						
+
 						const fieldsWithValue = descriptor.constraints.fields.map((field) => {
-							const values = field.path.map((possiblePath) => JSONPath({ path: possiblePath, json: json })[0] );
+							const values = field.path.map((possiblePath) => JSONPath({ path: possiblePath, json: json })[0]);
 							const val = values.filter((v) => v != undefined || v != null)[0]; // get first value that is not undefined
 							return { field, val };
 						});
@@ -109,6 +114,8 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 
 	async sendAuthorizationResponse(selectionMap: Map<string, string>): Promise<{ url?: string }> {
+		const S = await this.openID4VPRelyingPartyStateRepository.retrieve();
+		console.log("S = ", S)
 		async function hashSHA256(input) {
 			// Step 1: Encode the input string as a Uint8Array
 			const encoder = new TextEncoder();
@@ -150,10 +157,12 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		};
 
 
-		const presentationDefinition = JSON.parse(localStorage.getItem('presentationDefinition'))
-		const response_uri = localStorage.getItem('response_uri');
-		const nonce = localStorage.getItem('nonce');
-		const state = localStorage.getItem('state');
+		const presentationDefinition = S.presentation_definition;
+		console.log("DEF = ", presentationDefinition)
+		const response_uri = S.response_uri;
+		const client_id = S.client_id;
+		const nonce = S.nonce;
+		const state = S.state;
 
 		let { verifiableCredentials } = await this.getAllStoredVerifiableCredentials();
 		const allSelectedCredentialIdentifiers = Array.from(selectionMap.values());
@@ -183,27 +192,26 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 					"definition_id": presentationDefinition.id,
 					"id": vcEntity.doctype,
 					"descriptor_map": [
-							{
-									"id": vcEntity.doctype,
-									"format": "mso_mdoc",
-									"path": "$"
-							}
+						{
+							"id": vcEntity.doctype,
+							"format": "mso_mdoc",
+							"path": "$"
+						}
 					]
 				};
 				const parsed = await parseMsoMdocCredential(vcEntity.credential, vcEntity.doctype);
-				const { deviceResponseMDoc } = await this.generateDeviceResponseFn(parsed, presentationDefinition, generateRandomIdentifier(8), nonce, "acme-client-123", response_uri);
+				const { deviceResponseMDoc } = await this.generateDeviceResponseFn(parsed, presentationDefinition, generateRandomIdentifier(8), nonce, client_id, response_uri);
 				const formData = new URLSearchParams();
 				formData.append('vp_token', base64url.encode(deviceResponseMDoc.encode()));
 				formData.append('presentation_submission', JSON.stringify(submission));
 				formData.append('state', state);
-		
+
 				const res = await axios.post(response_uri, formData.toString(), {
 					maxRedirects: 0,
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',
 					}
 				});
-				console.log("NEw loc = ", res)
 				if (res.data.redirect_uri) {
 					return { url: res.data.redirect_uri };
 				}
@@ -216,10 +224,11 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, selectedVCs);
 		const { conformingCredentials, presentationSubmission } = await Verify.getMatchesForPresentationDefinition(vpjwt, presentationDefinition);
 
+		
 		const formData = new URLSearchParams();
 		formData.append('vp_token', vpjwt);
 		formData.append('presentation_submission', JSON.stringify(presentationSubmission));
-		formData.append('state', state);
+		formData.append('state', S.state);
 
 		const res = await axios.post(response_uri, formData.toString(), {
 			maxRedirects: 0,

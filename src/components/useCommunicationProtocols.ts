@@ -16,6 +16,8 @@ import { useApi } from "../api";
 import { IOpenID4VPRelyingParty } from "../lib/interfaces/IOpenID4VPRelyingParty";
 import { OpenID4VPRelyingParty } from "../lib/services/OpenID4VPRelyingParty";
 import { MDoc } from "@auth0/mdl";
+import { IOpenID4VPRelyingPartyStateRepository } from "../lib/interfaces/IOpenID4VPRelyingPartyStateRepository";
+import { OpenID4VPRelyingPartyStateRepository } from "../lib/services/OpenID4VPRelyingPartyStateRepository";
 
 
 export function useCommunicationProtocols() {
@@ -29,10 +31,13 @@ export function useCommunicationProtocols() {
 	// Register services
 
 	container.register<IHttpProxy>('HttpProxy', HttpProxy);
+	container.register<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository', OpenID4VPRelyingPartyStateRepository);
+
 	container.register<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository', OpenID4VCIClientStateRepository);
 	container.register<IOpenID4VCIHelper>('OpenID4VCIHelper', OpenID4VCIHelper, container.resolve<IHttpProxy>('HttpProxy'));
 
 	container.register<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty', OpenID4VPRelyingParty,
+		container.resolve<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository'),
 		async function getAllStoredVerifiableCredentials() {
 			const fetchAllCredentials = await api.get('/storage/vc');
 			return { verifiableCredentials: fetchAllCredentials.data.vc_list };
