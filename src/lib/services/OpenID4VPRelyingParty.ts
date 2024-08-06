@@ -40,7 +40,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 		const presentationDefinition = presentationDefinitionFetch.data;
 
-		console.log("Stored definition = ", presentationDefinition)
 		await this.openID4VPRelyingPartyStateRepository.store(new OpenID4VPRelyingPartyState(
 			presentationDefinition,
 			nonce,
@@ -96,26 +95,21 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				return { err: "INSUFFICIENT_CREDENTIALS" };
 			}
 			const requestedFieldNames = descriptor.constraints.fields
-				.map((field) => field.path)
-				.reduce((accumulator, currentValue) => [...accumulator, ...currentValue])
-				.map((field) => field.split('.')[field.split('.').length - 1]);
+				.map((field) => field.name)
 			mapping.set(descriptor.id, { credentials: [...conformingVcList], requestedFields: requestedFieldNames });
 		}
 		const verifierDomainName = new URL(response_uri).hostname;
-		console.log("Verifier domain = ", verifierDomainName)
 		if (mapping.size == 0) {
 			console.log("Credentials don't satisfy any descriptor")
 			throw new Error("Credentials don't satisfy any descriptor");
 		}
 
-		console.log("COnforming credentials ", mapping)
 		return { conformantCredentialsMap: mapping, verifierDomainName: verifierDomainName };
 	}
 
 
 	async sendAuthorizationResponse(selectionMap: Map<string, string>): Promise<{ url?: string }> {
 		const S = await this.openID4VPRelyingPartyStateRepository.retrieve();
-		console.log("S = ", S)
 		async function hashSHA256(input) {
 			// Step 1: Encode the input string as a Uint8Array
 			const encoder = new TextEncoder();
@@ -158,7 +152,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 
 		const presentationDefinition = S.presentation_definition;
-		console.log("DEF = ", presentationDefinition)
 		const response_uri = S.response_uri;
 		const client_id = S.client_id;
 		const nonce = S.nonce;
@@ -183,7 +176,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				const sdJwt = SdJwt.fromCompact<Record<string, unknown>, any>(
 					vcEntity.credential
 				).withHasher(hasherAndAlgorithm)
-				console.log(sdJwt);
 				const presentation = await sdJwt.present(presentationFrame);
 				selectedVCs.push(presentation);
 			}
