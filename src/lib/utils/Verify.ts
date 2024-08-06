@@ -21,7 +21,7 @@ export class Verify {
 			path: "$.input_descriptors[*]",
 			json: presentationDefinitionObj,
 		}) as InputDescriptorType[];
-	
+
 		console.log("Descriptors = ", descriptors)
 		const result = Verify.verifyRequirements(descriptors, vcJwtList);
 		if (!result) {

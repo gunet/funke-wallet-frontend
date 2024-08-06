@@ -216,7 +216,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, selectedVCs);
 		const { conformingCredentials, presentationSubmission } = await Verify.getMatchesForPresentationDefinition(vpjwt, presentationDefinition);
 
-		
+
 		const formData = new URLSearchParams();
 		formData.append('vp_token', vpjwt);
 		formData.append('presentation_submission', JSON.stringify(presentationSubmission));
