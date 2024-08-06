@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { parseCredential } from "../../functions/parseCredential";
 import StatusRibbon from '../../components/Credentials/StatusRibbon';
+import ausweis_card from '../../assets/images/ausweis_card.png';
 
 
 export const CredentialImage = ({ credential, className, onClick, showRibbon = true }) => {
@@ -16,7 +17,7 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 		<>
 			{parsedCredential && (
 				<>
-					<img src={parsedCredential.credentialBranding.image.url} alt={"Credential"} className={className} onClick={onClick} />
+					<img src={parsedCredential?.credentialBranding?.image?.url ?? ausweis_card} alt={"Credential"} className={className} onClick={onClick} />
 					{showRibbon &&
 						<StatusRibbon credential={credential} />
 					}

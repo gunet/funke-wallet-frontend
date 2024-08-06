@@ -6,6 +6,9 @@ import RedirectPopup from '../../components/Popups/RedirectPopup';
 import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
+import { base64url } from 'jose';
+import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
+import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
 
 function highlightBestSequence(issuer, search) {
 	if (typeof issuer !== 'string' || typeof search !== 'string') {
@@ -18,9 +21,16 @@ function highlightBestSequence(issuer, search) {
 	return highlighted;
 }
 
+
+const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
+const isMobile = window.innerWidth <= 480;
+const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.replace('http', 'eid') : process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL;
+
 const Issuers = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
 	const api = useApi(isOnline);
+	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
+
 	const [searchQuery, setSearchQuery] = useState('');
 	const [issuers, setIssuers] = useState([]);
 	const [filteredIssuers, setFilteredIssuers] = useState([]);
@@ -29,7 +39,21 @@ const Issuers = () => {
 	const [loading, setLoading] = useState(false);
 	const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
 
+	const [credentialIssuers, setCredentialIssuers] = useState([]);
+	const [availableCredentialConfigurations, setAvailableCredentialConfigurations] = useState(null);
+
+	const keystore = useLocalStorageKeystore();
 	const { t } = useTranslation();
+
+	async function getAllCredentialIssuerMetadata() {
+		return Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
+			const { metadata } = await openID4VCIHelper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier);
+			return {
+				credentialIssuerIdentifier: credentialIssuer.credential_issuer_identifier,
+				selectedDisplay: metadata.display.filter((display) => display.locale === 'en-US')[0]
+			}
+		}));
+	}
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -38,10 +62,18 @@ const Issuers = () => {
 
 		window.addEventListener('resize', handleResize);
 
+		getAllCredentialIssuerMetadata().then((issuers) => {
+			setCredentialIssuers(issuers);
+		});
+
 		return () => {
 			window.removeEventListener('resize', handleResize);
 		};
 	}, []);
+
+	useEffect(() => {
+		console.log("Credential issuers were mutated = ", credentialIssuers)
+	}, [credentialIssuers])
 
 	useEffect(() => {
 		const fetchIssuers = async () => {
@@ -65,7 +97,7 @@ const Issuers = () => {
 
 	useEffect(() => {
 		const filtered = issuers.filter((issuer) => {
-			const friendlyName = issuer.friendlyName.toLowerCase();
+			const friendlyName = issuer.selectedDisplay.name.toLowerCase();
 			const query = searchQuery.toLowerCase();
 			return friendlyName.includes(query);
 		});
@@ -73,9 +105,15 @@ const Issuers = () => {
 		setFilteredIssuers(filtered);
 	}, [searchQuery, issuers]);
 
-	const handleIssuerClick = async (did) => {
-		const clickedIssuer = issuers.find((issuer) => issuer.did === did);
+	const handleIssuerClick = async (credentialIssuerIdentifier) => {
+		const clickedIssuer = credentialIssuers.find((issuer) => issuer.credentialIssuerIdentifier === credentialIssuerIdentifier);
 		if (clickedIssuer) {
+			const cl = openID4VCIClients[credentialIssuerIdentifier];
+			if (!cl) {
+				return;
+			}
+			const confs = await cl.getAvailableCredentialConfigurations();
+			setAvailableCredentialConfigurations(confs);
 			setSelectedIssuer(clickedIssuer);
 			setShowRedirectPopup(true);
 		}
@@ -86,28 +124,38 @@ const Issuers = () => {
 		setSelectedIssuer(null);
 	};
 
-	const handleContinue = () => {
+	const handleContinue = (selectedConfiguration) => {
 		setLoading(true);
 
-		console.log('Continue with:', selectedIssuer);
+		console.log("Seelected issuer = ", selectedIssuer)
+		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
+			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
+			console.log("Selected configuration = ", selectedConfiguration)
+			const userHandleB64u = keystore.getUserHandleB64u();
+			if (userHandleB64u == null) {
+				console.error("Could not generate authorization request because user handle is null");
+				return;
+			}
+			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
+				console.log("Request uri = ", request_uri)
+				const urlObj = new URL(url);
+				// Construct the base URL
+				const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
 
-		if (selectedIssuer && selectedIssuer.did) {
-			const payload = {
-				legal_person_did: selectedIssuer.did,
-			};
+				// Parameters
+				// Encode parameters
+				const encodedClientId = encodeURIComponent(client_id);
+				const encodedRequestUri = encodeURIComponent(request_uri);
+				const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
 
-			api.post('/communication/handle', payload)
-				.then((response) => {
-					const { redirect_to } = response.data;
-					console.log(redirect_to);
+				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
 
-					// Redirect to the URL received from the backend
-					window.location.href = redirect_to;
-				})
-				.catch((error) => {
-					// Handle errors from the backend if needed
-					console.error('Error sending request to backend:', error);
-				});
+				console.log("new loc = ", newLoc)
+				window.location.href = newLoc;
+			}).catch((err) => {
+				console.error(err)
+				console.error("Couldn't generate authz req")
+			});
 		}
 
 		setLoading(false);
@@ -144,23 +192,23 @@ const Issuers = () => {
 						onChange={handleSearch}
 					/>
 				</div>
-				{filteredIssuers.length === 0 ? (
+				{credentialIssuers.length === 0 ? (
 					<p className="text-gray-700 dark:text-gray-300 mt-4">{t('pageAddCredentials.noFound')}</p>
 				) : (
 					<div
 						className="max-h-screen-80 overflow-y-auto space-y-2"
 						style={{ maxHeight: '80vh' }}
 					>
-						{filteredIssuers.map((issuer) => (
+						{credentialIssuers.map((issuer) => (
 							<button
-								key={issuer.id}
-								className={`bg-white px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white break-words w-full text-left ${!isOnline ? ' text-gray-300 border-gray-300 dark:text-gray-700 dark:border-gray-700 cursor-not-allowed' : 'cursor-pointer'}`}
+								key={issuer.credentialIssuerIdentifier}
+								className="bg-white px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white break-words w-full text-left"
 								style={{ wordBreak: 'break-all' }}
-								onClick={() => handleIssuerClick(issuer.did)}
+								onClick={() => handleIssuerClick(issuer.credentialIssuerIdentifier)}
 								disabled={!isOnline}
 								title={!isOnline ? t('common.offlineTitle') : ''}
 							>
-								<div dangerouslySetInnerHTML={{ __html: highlightBestSequence(issuer.friendlyName, searchQuery) }} />
+								<div dangerouslySetInnerHTML={{ __html: highlightBestSequence(issuer.selectedDisplay.name, searchQuery) }} />
 							</button>
 						))}
 					</div>
@@ -172,8 +220,9 @@ const Issuers = () => {
 					loading={loading}
 					handleClose={handleCancel}
 					handleContinue={handleContinue}
-					popupTitle={`${t('pageAddCredentials.popup.title')} ${selectedIssuer?.friendlyName}`}
-					popupMessage={t('pageAddCredentials.popup.message', { issuerName: selectedIssuer?.friendlyName })}
+					availableCredentialConfigurations={availableCredentialConfigurations}
+					popupTitle={`${t('pageAddCredentials.popup.title')} ${selectedIssuer?.selectedDisplay.name}`}
+					popupMessage={t('pageAddCredentials.popup.message', { issuerName: selectedIssuer?.selectedDisplay.name })}
 				/>
 			)}
 
