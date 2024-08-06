@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { FaShare } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
@@ -8,12 +8,18 @@ import Spinner from '../../components/Spinner';
 
 const RedirectPopup = ({ loading, availableCredentialConfigurations, handleClose, handleContinue, popupTitle, popupMessage }) => {
 	const { t } = useTranslation();
-	const [selectedConfiguration, setSelectedConfiguration] = useState(availableCredentialConfigurations['pid-sd-jwt']);
+	const [selectedConfiguration, setSelectedConfiguration] = useState(null);
 
 	const credentialConfigurationIdDisplayGlossary = {
 		"pid-sd-jwt": t('pageAddCredentials.pidSdJwt'),
 		"pid-mso-mdoc": t('pageAddCredentials.pidMsoMdoc'),
 	};
+
+	useEffect(() => {
+		if (availableCredentialConfigurations) {
+			setSelectedConfiguration(Object.values(availableCredentialConfigurations)[0])
+		}
+	}, [])
 
 	const handleOptionChange = (event) => {
 		if (availableCredentialConfigurations) {
@@ -49,7 +55,7 @@ const RedirectPopup = ({ loading, availableCredentialConfigurations, handleClose
 				{popupMessage}
 			</p>
 
-			{availableCredentialConfigurations && Object.keys(availableCredentialConfigurations).map((credentialConfigurationId, index) => {
+			{availableCredentialConfigurations != undefined && Object.keys(availableCredentialConfigurations).map((credentialConfigurationId, index) => {
 				return (
 					<div class="flex items-center mb-4">
 						<input
