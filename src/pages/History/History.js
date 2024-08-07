@@ -51,8 +51,8 @@ const History = () => {
 			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
 				base64url.decode(item.presentation.split('.')[1])
 			));
-	
-			vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
+
+			vcEntities = item.presentationSubmission.descriptor_map.map(({ id, path, format }) => {
 				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
 				console.log("FOUND = ", findCredentialByPath)
 				if (!findCredentialByPath) {
