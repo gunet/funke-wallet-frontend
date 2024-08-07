@@ -205,6 +205,8 @@ const Issuers = () => {
 								className="bg-white px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white break-words w-full text-left"
 								style={{ wordBreak: 'break-all' }}
 								onClick={() => handleIssuerClick(issuer.credentialIssuerIdentifier)}
+								disabled={!isOnline}
+								title={!isOnline ? t('common.offlineTitle') : ''}
 							>
 								<div dangerouslySetInnerHTML={{ __html: highlightBestSequence(issuer.selectedDisplay.name, searchQuery) }} />
 							</button>

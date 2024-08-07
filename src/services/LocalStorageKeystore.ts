@@ -36,6 +36,7 @@ export interface LocalStorageKeystore {
 	initPassword(password: string): Promise<{
 		publicData: PublicData,
 		privateData: EncryptedContainer,
+		setUserHandleB64u: (userHandleB64u: string) => void,
 	}>,
 	initPrf(
 		credential: PublicKeyCredential,
@@ -52,6 +53,7 @@ export interface LocalStorageKeystore {
 	unlockPassword(
 		privateData: EncryptedContainer,
 		password: string,
+		user: UserData,
 	): Promise<[EncryptedContainer, CommitCallback] | null>,
 	unlockPrf(
 		privateData: EncryptedContainer,
@@ -85,12 +87,6 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 	const [sessionKey, setSessionKey, clearSessionKey] = useSessionStorage<BufferSource | null>("sessionKey", null);
 	const [privateDataJwe, setPrivateDataJwe, clearPrivateDataJwe] = useSessionStorage<string | null>("privateDataJwe", null);
 	const clearSessionStorage = useClearStorages(clearUserHandleB64u, clearSessionKey, clearPrivateDataJwe);
-
-	useEffect(() => {
-		// Moved from local storage to session storage
-		window?.localStorage?.removeItem("userHandle");
-		window?.localStorage?.removeItem("webauthnRpId");
-	}, []);
 
 	const idb = useIndexedDb("wallet-frontend", 2, useCallback((db, prevVersion, newVersion) => {
 		if (prevVersion < 1) {
@@ -219,9 +215,10 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 				initPassword: async (password: string): Promise<{
 					publicData: PublicData,
 					privateData: EncryptedContainer,
+					setUserHandleB64u: (userHandleB64u: string) => void,
 				}> => {
 					const { mainKey, keyInfo } = await keystore.initPassword(password);
-					return await init(mainKey, keyInfo, null);
+					return { ...await init(mainKey, keyInfo, null), setUserHandleB64u };
 				},
 
 				initPrf: async (
@@ -262,9 +259,10 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 				unlockPassword: async (
 					privateData: EncryptedContainer,
 					password: string,
+					user: UserData,
 				): Promise<[EncryptedContainer, CommitCallback] | null> => {
 					const [unlockResult, newPrivateData] = await keystore.unlockPassword(privateData, password);
-					await finishUnlock(unlockResult, null);
+					await finishUnlock(unlockResult, user);
 					return (
 						newPrivateData
 							?
