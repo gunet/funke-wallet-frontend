@@ -20,7 +20,8 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		private openID4VPRelyingPartyStateRepository: OpenID4VPRelyingPartyStateRepository,
 		private getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>,
 		private signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>,
-		private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>
+		private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>,
+		private storeVerifiablePresentation: (presentation: string, format: string, presentationSubmission: any, audience: string) => Promise<void>
 	) { }
 
 
@@ -193,8 +194,9 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				};
 				const parsed = await parseMsoMdocCredential(vcEntity.credential, vcEntity.doctype);
 				const { deviceResponseMDoc } = await this.generateDeviceResponseFn(parsed, presentationDefinition, generateRandomIdentifier(8), nonce, client_id, response_uri);
+				const encodedDeviceResponse = base64url.encode(deviceResponseMDoc.encode());
 				const formData = new URLSearchParams();
-				formData.append('vp_token', base64url.encode(deviceResponseMDoc.encode()));
+				formData.append('vp_token', encodedDeviceResponse);
 				formData.append('presentation_submission', JSON.stringify(submission));
 				formData.append('state', state);
 
@@ -204,6 +206,8 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 						'Content-Type': 'application/x-www-form-urlencoded',
 					}
 				});
+				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", submission, new URL(S.response_uri).hostname);
+
 				if (res.data.redirect_uri) {
 					return { url: res.data.redirect_uri };
 				}
@@ -228,6 +232,8 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			}
 		});
+		await this.storeVerifiablePresentation(vpjwt, "jwt_vp", presentationSubmission, new URL(S.response_uri).hostname);
+
 		if (res.data.redirect_uri) {
 			return { url: res.data.redirect_uri };
 		}

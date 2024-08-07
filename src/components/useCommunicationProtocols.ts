@@ -47,8 +47,18 @@ export function useCommunicationProtocols() {
 			return keystore.signJwtPresentation(nonce, audience, verifiableCredentials)
 		},
 
-		async (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => {
+		async function generateDeviceResponse(mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) {
 			return keystore.generateDeviceResponse(mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri);
+		},
+
+		async function storeVerifiablePresentation(presentation: string, format: string, presentationSubmission: any, audience: string) {
+			await api.post('/storage/vp', {
+				presentation,
+				format,
+				presentationSubmission,
+				issuanceDate: new Date().toISOString(),
+				audience,
+			});
 		}
 	);
 

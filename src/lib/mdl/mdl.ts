@@ -45,6 +45,11 @@ export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: str
 	return parse(encoded);
 }
 
+export const parseMsoMdocDeviceResponse = async (mso_mdoc_device_response: string): Promise<MDoc> => {
+	const dec = jose.base64url.decode(mso_mdoc_device_response);
+	return parse(dec);
+}
+
 export const convertToJSONWithMaps = (obj) => {
 	return JSON.parse(JSON.stringify(obj, (key, value) => {
 		if (value instanceof Map) {
