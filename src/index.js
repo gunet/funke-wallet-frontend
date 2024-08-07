@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import ConsoleBehavior from './ConsoleBehavior';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
+import { BackgroundTasksProvider } from './context/BackgroundTasksContext';
 import { initializeDataSource } from './indexedDB';
 import * as offlineSW from './offlineRegistrationSW';
 import * as firebaseSW from './firebase';
@@ -33,7 +34,9 @@ const RootComponent = () => {
 const root = createRoot(document.getElementById('root'));
 root.render(
 	<OnlineStatusProvider>
-		<RootComponent />
+		<BackgroundTasksProvider>
+			<RootComponent />
+		</BackgroundTasksProvider>
 	</OnlineStatusProvider>
 );
 

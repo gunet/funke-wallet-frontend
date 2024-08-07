@@ -8,6 +8,7 @@ import { useApi } from '../api';
 import logo from '../assets/images/wallet_white.png';
 import { Trans, useTranslation } from 'react-i18next';
 import OnlineStatusContext from '../context/OnlineStatusContext';
+import { BackgroundTasksContext } from '../context/BackgroundTasksContext';
 import SessionContext from '../context/SessionContext';
 import { PiWifiHighBold, PiWifiSlashBold } from "react-icons/pi";
 
@@ -31,6 +32,7 @@ const NavItem = ({
 
 const Sidebar = ({ isOpen, toggle }) => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { isLoading, addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const api = useApi();
 	const { logout } = useContext(SessionContext);
 	const { username, displayName } = api.getSession();
@@ -111,6 +113,13 @@ const Sidebar = ({ isOpen, toggle }) => {
 								<>
 									<PiWifiSlashBold size={20} />
 									<span className='text-sm'>{t('common.offline')}</span>
+								</>
+							)}
+						</div>
+						<div className='flex items-center space-x-2 p-2 rounded-r-xl'>
+							{isLoading() && (
+								<>
+									Loading...
 								</>
 							)}
 						</div>
