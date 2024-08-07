@@ -45,22 +45,35 @@ const History = () => {
 	};
 
 	const handleHistoryItemClick = async (item) => {
+		let vcEntities = [];
 		// Export all credentials from the presentation
-		const vpTokenPayload = JSON.parse(new TextDecoder().decode(
-			base64url.decode(item.presentation.split('.')[1])
-		));
+		if (item.format == "jwt_vp") {
+			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
+				base64url.decode(item.presentation.split('.')[1])
+			));
 
-		const vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
-			const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
-			console.log("FOUND = ", findCredentialByPath)
-			if (!findCredentialByPath) {
-				throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
-			}
-			return {
-				format: format,
-				credential: findCredentialByPath,
-			}
-		})
+			vcEntities = item.presentationSubmission.descriptor_map.map(({ id, path, format }) => {
+				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
+				console.log("FOUND = ", findCredentialByPath)
+				if (!findCredentialByPath) {
+					throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
+				}
+				return {
+					format: format,
+					credential: findCredentialByPath,
+				}
+			})
+		}
+		else if (item.format == "mso_mdoc") {
+			// reusing the StorableCredential data type to pass the mso mdoc device respose
+			vcEntities = [{
+				format: "mso_mdoc",
+				credential: item.presentation,
+				credentialIdentifier: "",
+				doctype: ""
+			}];
+		}
+
 
 		// Set matching credentials and show the popup
 		setMatchingCredentials(vcEntities);
@@ -74,7 +87,7 @@ const History = () => {
 				console.log(fetchedPresentations.vp_list);
 				// Extract and map the vp_list from fetchedPresentations.
 				const vpListFromApi = fetchedPresentations.vp_list
-					.sort((vpA, vpB) => vpB.issuanceDate - vpA.issuanceDate)
+					.sort((vpA, vpB) => new Date(vpB.issuanceDate) - new Date(vpA.issuanceDate))
 					.map((item) => ({
 						...item
 					}));
@@ -112,7 +125,7 @@ const History = () => {
 								onClick={() => handleHistoryItemClick(item)}
 							>
 								<div className="font-bold">{item.audience}</div>
-								<div>{formatDate(new Date(item.issuanceDate * 1000).toISOString())}</div>
+								<div>{formatDate(new Date(item.issuanceDate).toISOString())}</div>
 							</button>
 						))}
 					</div>

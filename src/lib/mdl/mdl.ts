@@ -29,7 +29,7 @@ export const verifyMdocWithAllCerts = async (mdoc: MDoc) => {
 	}
 }
 
-export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: string): Promise<any> => {
+export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: string): Promise<MDoc> => {
 
 	const credentialBytes = jose.base64url.decode(mso_mdoc_cred);
 	const issuerSigned = await cbor.decode(credentialBytes);
@@ -43,6 +43,11 @@ export const parseMsoMdocCredential = async (mso_mdoc_cred: string, docType: str
 	}
 	const encoded = cbor.encode(m) as Uint8Array;
 	return parse(encoded);
+}
+
+export const parseMsoMdocDeviceResponse = async (mso_mdoc_device_response: string): Promise<MDoc> => {
+	const dec = jose.base64url.decode(mso_mdoc_device_response);
+	return parse(dec);
 }
 
 export const convertToJSONWithMaps = (obj) => {

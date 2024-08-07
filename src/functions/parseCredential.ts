@@ -8,7 +8,7 @@ import {
 } from '@sd-jwt/core'
 import { VerifiableCredentialFormat } from '../lib/schemas/vc';
 import { StorableCredential } from '../lib/types/StorableCredential';
-import { convertToJSONWithMaps, parseMsoMdocCredential, verifyMdocWithAllCerts } from '../lib/mdl/mdl';
+import { convertToJSONWithMaps, parseMsoMdocCredential, parseMsoMdocDeviceResponse, verifyMdocWithAllCerts } from '../lib/mdl/mdl';
 import { verifySdJwtBasedOnTrustAnchors } from '../lib/sd-jwt/sd-jwt';
 
 export enum CredentialFormat {
@@ -53,14 +53,16 @@ export const parseCredential = async (credential: StorableCredential, validate: 
 	}
 
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
-		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype);
+		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype).catch(() => {
+			return parseMsoMdocDeviceResponse(credential.credential); // parse design response
+		});
 		if (validate) {
 			const result = await verifyMdocWithAllCerts(parsed);
 			if (!result) {
 				throw new Error("MDOC verification failed");
 			}
 		}
-		const ns = parsed.documents[0].getIssuerNameSpace(credential.doctype);
+		const ns = parsed.documents[0].getIssuerNameSpace(parsed.documents[0].issuerSignedNameSpaces[0]);
 		return convertToJSONWithMaps(ns);
 	}
 

@@ -2,7 +2,6 @@ import React, { createContext, useState, useCallback, useContext } from 'react';
 import { useApi } from '../api';
 import { extractCredentialFriendlyName } from '../functions/extractCredentialFriendlyName';
 import OnlineStatusContext from '../context/OnlineStatusContext';
-import { useCommunicationProtocols } from '../components/useCommunicationProtocols';
 
 const CredentialsContext = createContext();
 
@@ -12,7 +11,6 @@ export const CredentialsProvider = ({ children }) => {
 	const [vcEntityList, setVcEntityList] = useState([]);
 	const [latestCredentials, setLatestCredentials] = useState(new Set());
 
-	const protocols = useCommunicationProtocols();
 	const getData = useCallback(async () => {
 		try {
 			const response = await api.get('/storage/vc');
@@ -39,7 +37,7 @@ export const CredentialsProvider = ({ children }) => {
 		} catch (error) {
 			console.error('Failed to fetch data', error);
 		}
-	}, [api, protocols]);
+	}, [api]);
 
 	return (
 		<CredentialsContext.Provider value={{ vcEntityList, latestCredentials, getData }}>

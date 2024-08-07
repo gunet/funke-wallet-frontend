@@ -1,3 +1,5 @@
+import * as jose from 'jose';
+
 export type DidKeyVersion = "p256-pub" | "jwk_jcs-pub";
 
 export const APP_VERSION = process.env.REACT_APP_VERSION;
@@ -20,3 +22,4 @@ export const WEBAUTHN_RPID = process.env.REACT_APP_WEBAUTHN_RPID ?? "localhost";
 export const WS_URL = process.env.REACT_APP_WS_URL;
 
 export const verifiablePresentationSchemaURL = "https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9";
+export const TRUST_ANCHOR_CERTS: string[] = process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U ? JSON.parse(new TextDecoder().decode(jose.base64url.decode(process.env.REACT_APP_TRUST_ANCHOR_CERTS_JSON_B64U))) : [];

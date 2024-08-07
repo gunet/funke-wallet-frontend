@@ -10,29 +10,18 @@ import { generateDPoP } from '../utils/dpop';
 import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
 import { StorableCredential } from '../types/StorableCredential';
 import * as jose from 'jose';
+import { generateRandomIdentifier } from '../utils/generateRandomIdentifier';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
 
 export class OpenID4VCIClient implements IOpenID4VCIClient {
-	private config: ClientConfig;
-	private httpProxy: IHttpProxy;
-	private openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository;
 
-	private generateNonceProof: (cNonce: string, audience: string, clientId: string) => Promise<{ jws: string }>;
-	private storeCredential: (c: StorableCredential) => Promise<void>;
-
-	constructor(config: ClientConfig,
-		httpProxy: IHttpProxy,
-		openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository,
-		generateNonceProof: (cNonce: string, audience: string, clientId: string) => Promise<{ jws: string }>,
-		storeCredential: (c: StorableCredential) => Promise<void>) {
-
-		this.config = config;
-		this.httpProxy = httpProxy;
-		this.openID4VCIClientStateRepository = openID4VCIClientStateRepository;
-		this.generateNonceProof = generateNonceProof;
-		this.storeCredential = storeCredential;
-	}
+	constructor(private config: ClientConfig,
+		private httpProxy: IHttpProxy,
+		private openID4VCIClientStateRepository: IOpenID4VCIClientStateRepository,
+		private generateNonceProof: (cNonce: string, audience: string, clientId: string) => Promise<{ jws: string }>,
+		private storeCredential: (c: StorableCredential) => Promise<void>
+	) { }
 
 
 	async handleCredentialOffer(credentialOfferURL: string): Promise<{ credentialIssuer: string, selectedCredentialConfigurationSupported: CredentialConfigurationSupported; }> {
@@ -193,6 +182,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
 			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
 				await this.storeCredential({
+					credentialIdentifier: generateRandomIdentifier(32),
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
 					vct: flowState.selectedCredentialConfiguration.vct,
@@ -200,6 +190,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			}
 			else if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.MSO_MDOC) {
 				await this.storeCredential({
+					credentialIdentifier: generateRandomIdentifier(32),
 					credential: credential,
 					format: flowState.selectedCredentialConfiguration.format,
 					doctype: flowState.selectedCredentialConfiguration.doctype,
