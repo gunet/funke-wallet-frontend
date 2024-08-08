@@ -141,30 +141,39 @@ const Issuers = () => {
 				console.error("Could not generate authorization request because user handle is null");
 				return;
 			}
-			cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
-				console.log("Request uri = ", request_uri)
-				const urlObj = new URL(url);
-				// Construct the base URL
-				const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
-
-				// Parameters
-				// Encode parameters
-				const encodedClientId = encodeURIComponent(client_id);
-				const encodedRequestUri = encodeURIComponent(request_uri);
-				const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
-
-				const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
-
-				console.log("new loc = ", newLoc)
-				window.location.href = newLoc;
+			cl.attemptMemorizedCredentialRequest(selectedConfiguration).then(() => {
+				setLoading(false);
+				setShowRedirectPopup(false);
 			}).catch((err) => {
 				console.error(err)
-				console.error("Couldn't generate authz req")
-			});
+				console.log("Generating...")
+				cl.generateAuthorizationRequest(selectedConfiguration, userHandleB64u).then(({ url, client_id, request_uri }) => {
+					console.log("Request uri = ", request_uri)
+					const urlObj = new URL(url);
+					// Construct the base URL
+					const baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+	
+					// Parameters
+					// Encode parameters
+					const encodedClientId = encodeURIComponent(client_id);
+					const encodedRequestUri = encodeURIComponent(request_uri);
+					const tcTokenURL = `${baseUrl}?client_id=${encodedClientId}&request_uri=${encodedRequestUri}`;
+	
+					setLoading(false);
+					setShowRedirectPopup(false);
+					const newLoc = `${eIDClientURL}?tcTokenURL=${encodeURIComponent(tcTokenURL)}`
+	
+					console.log("new loc = ", newLoc)
+					window.location.href = newLoc;
+				}).catch((err) => {
+					console.error(err)
+					console.error("Couldn't generate authz req")
+				});
+			})
+
 		}
 
-		setLoading(false);
-		setShowRedirectPopup(false);
+
 	};
 
 	// QR Code part

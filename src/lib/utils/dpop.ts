@@ -1,6 +1,6 @@
-import { exportJWK, KeyLike, SignJWT } from "jose";
+import { exportJWK, KeyLike, SignJWT, JWK } from "jose";
 
-export async function generateDPoP(privateKey: KeyLike, publicKey: KeyLike, jti: string, targetMethod: string, targetUri: string, nonce?: string, access_token?: string) {
+export async function generateDPoP(privateKey: CryptoKey, publicKey: CryptoKey, jti: string, targetMethod: string, targetUri: string, nonce?: string, access_token?: string) {
 	return new SignJWT({
 		"jti": jti,
 		"htm": targetMethod,
@@ -12,7 +12,7 @@ export async function generateDPoP(privateKey: KeyLike, publicKey: KeyLike, jti:
 		.setProtectedHeader({
 			"typ": "dpop+jwt",
 			"alg": "ES256",
-			"jwk": await exportJWK(publicKey)
+			"jwk": (await crypto.subtle.exportKey("jwk", publicKey)) as JWK,
 		})
 		.sign(privateKey);
 }
