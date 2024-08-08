@@ -1,9 +1,9 @@
-import React, { useEffect, createContext, useState } from 'react';
+import React, { createContext, useState } from 'react';
 
 export const BackgroundTasksContext = createContext({
-	addLoader: () => {},
-	removeLoader: () => {},
-	isLoading: () => {},
+	addLoader: () => { },
+	removeLoader: () => { },
+	isLoading: () => { },
 	loading: 0
 });
 
@@ -20,7 +20,7 @@ export const BackgroundTasksProvider = ({ children }) => {
 	}
 
 	return (
-		<BackgroundTasksContext.Provider value={{addLoader, removeLoader, isLoading, loading}}>
+		<BackgroundTasksContext.Provider value={{ addLoader, removeLoader, isLoading, loading }}>
 			{children}
 		</BackgroundTasksContext.Provider>
 	);
