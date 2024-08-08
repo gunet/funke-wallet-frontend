@@ -4,6 +4,7 @@ import { useLocalStorageKeystore } from '../services/LocalStorageKeystore';
 import { useTranslation } from 'react-i18next';
 import { useCommunicationProtocols } from './useCommunicationProtocols';
 import SessionContext from '../context/SessionContext';
+import { BackgroundTasksContext } from '../context/BackgroundTasksContext';
 
 export enum HandleOutboundRequestError {
 	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
@@ -32,6 +33,7 @@ function useCheckURL(urlToCheck: string): {
 } {
 	const api = useApi();
 	const { openID4VCIClients, httpProxy, openID4VPRelyingParty } = useCommunicationProtocols();
+	const { addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const { isLoggedIn } = useContext(SessionContext);
 	const [showSelectCredentialsPopup, setShowSelectCredentialsPopup] = useState<boolean>(false);
 	const [showPinInputPopup, setShowPinInputPopup] = useState<boolean>(false);
@@ -128,10 +130,15 @@ function useCheckURL(urlToCheck: string): {
 		if (u.searchParams.get('code')) {
 			for (const credentialIssuerIdentifier of Object.keys(openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
+				addLoader();
 				openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(urlToCheck)
+					.then(() => {
+						removeLoader();
+					})
 					.catch(err => {
 						console.log("Error during the handling of authorization response")
 						console.error(err)
+						removeLoader();
 					});
 			}
 		}
