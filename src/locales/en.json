@@ -133,7 +133,7 @@
 		"pidSdJwt": "SD JWT PID",
 		"pidMsoMdoc": "mDoc PID",
 		"popup": {
-			"message": "You have selected {{issuerName}}. This credential issuer can provide credentials of the following types. By selecting one type and clicking on 'Continue', you will be redirected to the issuer.",
+			"message": "This credential issuer can provide credentials of the following types. By selecting one type and clicking on 'Continue', you will be redirected to the issuer.",
 			"title": "Selected Issuer:"
 		},
 		"searchPlaceholder": "Search issuers..."
@@ -163,7 +163,7 @@
 		"description": "Search and choose a verifier to share credentials with",
 		"noFound": "No matching verifiers found.",
 		"popup": {
-			"message": "You have selected {{verifierName}}. If you continue, you will be redirected in the current tab to the issuer's page.",
+			"message": "If you continue, you will be redirected in the current tab to the issuer's page.",
 			"title": "Selected Verifier:"
 		},
 		"searchPlaceholder": "Search verifiers..."
