@@ -227,7 +227,7 @@ const Issuers = () => {
 					handleContinue={handleContinue}
 					availableCredentialConfigurations={availableCredentialConfigurations}
 					popupTitle={`${t('pageAddCredentials.popup.title')} ${selectedIssuer?.selectedDisplay.name}`}
-					popupMessage={t('pageAddCredentials.popup.message', { issuerName: selectedIssuer?.selectedDisplay.name })}
+					popupMessage={t('pageAddCredentials.popup.message')}
 				/>
 			)}
 
