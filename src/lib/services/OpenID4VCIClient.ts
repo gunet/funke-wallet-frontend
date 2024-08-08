@@ -9,7 +9,6 @@ import { VerifiableCredentialFormat } from '../schemas/vc';
 import { generateDPoP } from '../utils/dpop';
 import { CredentialOfferSchema } from '../schemas/CredentialOfferSchema';
 import { StorableCredential } from '../types/StorableCredential';
-import * as jose from 'jose';
 import { generateRandomIdentifier } from '../utils/generateRandomIdentifier';
 
 const redirectUri = process.env.REACT_APP_OPENID4VCI_REDIRECT_URI as string;
@@ -50,6 +49,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		const { code_challenge, code_verifier } = await pkce();
 
 		const formData = new URLSearchParams();
+		const state = btoa(JSON.stringify({ userHandleB64u: userHandleB64u })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 
 		formData.append("scope", selectedCredentialConfigurationSupported.scope);
 
@@ -60,7 +60,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 
 		formData.append("code_challenge_method", "S256");
 
-		formData.append("state", btoa(JSON.stringify({userHandleB64u: userHandleB64u})).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""));
+		formData.append("state", state);
 
 		formData.append("redirect_uri", redirectUri);
 
@@ -72,7 +72,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		const { request_uri, expires_in } = res.data;
 		const authorizationRequestURL = `${this.config.authorizationServerMetadata.authorization_endpoint}?request_uri=${request_uri}&client_id=${this.config.clientId}`
 
-		await this.openID4VCIClientStateRepository.store(new OpenID4VCIClientState(code_verifier, selectedCredentialConfigurationSupported));
+		await this.openID4VCIClientStateRepository.store(state, new OpenID4VCIClientState(state, code_verifier, selectedCredentialConfigurationSupported));
 
 		return {
 			url: authorizationRequestURL,
@@ -89,11 +89,20 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			throw new Error("Could not handle authorization response");
 		}
 
+		const state = parsedUrl.searchParams.get('state');
 
 		// Token Request
 		const tokenEndpoint = this.config.authorizationServerMetadata.token_endpoint;
 
-		const { privateKey, publicKey } = await jose.generateKeyPair('ES256'); // keypair for dpop
+		const signatureAlgorithmFamily = "ECDSA";
+		const namedCurve = "P-256";
+		// keypair for dpop
+		const { publicKey, privateKey } = await crypto.subtle.generateKey(
+			{ name: signatureAlgorithmFamily, namedCurve: namedCurve },
+			true,
+			['sign', 'verify']
+		);
+
 		const dpop = await generateDPoP(
 			privateKey,
 			publicKey,
@@ -103,7 +112,7 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			dpopNonceHeader
 		);
 
-		const flowState = await this.openID4VCIClientStateRepository.retrieve();
+		const flowState = await this.openID4VCIClientStateRepository.retrieve(state);
 
 		const formData = new URLSearchParams();
 		formData.append('grant_type', 'authorization_code');
@@ -118,12 +127,12 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 				'DPoP': dpop
 			});
 		}
-		catch(err) {
+		catch (err) {
 			console.log("failed token request")
 			console.error(err);
 			dpopNonceHeader = err.response.data.err.headers['dpop-nonce'];
 			if (dpopNonceHeader) {
-				this.handleAuthorizationResponse(url, dpopNonceHeader);
+				await this.handleAuthorizationResponse(url, dpopNonceHeader);
 				return;
 			}
 			return;
@@ -135,16 +144,61 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			data: { access_token, c_nonce, c_nonce_expires_in, expires_in, token_type },
 		} = response;
 
+		flowState.dpopNonce = response.headers['dpop-nonce'];
+		const [privateKeyJwk, publicKeyJwk] = await Promise.all([crypto.subtle.exportKey("jwk", privateKey), crypto.subtle.exportKey("jwk", publicKey)]);
+		flowState.dpopPrivateKeyJwk = privateKeyJwk;
+		flowState.dpopPublicKeyJwk = publicKeyJwk;
+		flowState.access_token_receival_date = new Date();
+		flowState.access_token = access_token;
+		flowState.expires_in = expires_in;
+		flowState.c_nonce_receival_date = new Date();
+		flowState.c_nonce = c_nonce;
+		flowState.c_nonce_expires_in = c_nonce_expires_in;
+		await this.openID4VCIClientStateRepository.store(flowState.id, flowState); // update flow state
 
 		// Credential Request
-		this.credentialRequest(response, privateKey, publicKey, flowState);
+		await this.credentialRequest(flowState);
 	}
 
-	private async credentialRequest(response: any, privateKey: jose.KeyLike, publicKey: jose.KeyLike, flowState: OpenID4VCIClientState) {
-		const {
-			data: { access_token, c_nonce, c_nonce_expires_in, expires_in, token_type },
-		} = response;
-		const newDPoPNonce = response.headers['dpop-nonce'];
+	async attemptMemorizedCredentialRequest(selectedCredentialConfigurationSupported: CredentialConfigurationSupported) {
+		const flowStates = await this.openID4VCIClientStateRepository.getAllStates();
+		console.log("Valid states = ", flowStates[0])
+		if (flowStates.length == 0) {
+			throw new Error("No flow state exists to attempt credential retrieval");
+		}
+
+		console.log("Attempting memorized ...")
+		console.log("States = ", flowStates)
+		const results = await Promise.all(flowStates.map(async (flowState) => {
+			if (JSON.stringify(flowState.selectedCredentialConfiguration) === JSON.stringify(selectedCredentialConfigurationSupported)) {
+				try {
+					const { received } = await this.credentialRequest(flowState);
+					return received;
+				}
+				catch (err) {
+					return false;
+				}
+
+			}
+			return false;
+		}));
+
+		console.log("Results array = ", results)
+		if (!results.includes(true)) {
+			throw new Error("Did not recieve credential from attemptMemorizedCredentialRequest");
+		}
+	}
+
+	private async credentialRequest(flowState: OpenID4VCIClientState): Promise<{ received: boolean }> {
+		console.log("Sending...")
+		const newDPoPNonce = flowState.dpopNonce;
+		const signatureAlgorithmFamily = "ECDSA";
+		const namedCurve = "P-256";
+		const [privateKey, publicKey] = await Promise.all([
+			crypto.subtle.importKey("jwk", flowState.dpopPrivateKeyJwk, { name: signatureAlgorithmFamily, namedCurve: namedCurve }, true, ['sign']),
+			crypto.subtle.importKey("jwk", flowState.dpopPublicKeyJwk, { name: signatureAlgorithmFamily, namedCurve: namedCurve }, true, ['verify'])
+		]);
+
 		const credentialEndpoint = this.config.credentialIssuerMetadata.credential_endpoint;
 		const credentialEndpointDPoP = await generateDPoP(
 			privateKey,
@@ -153,10 +207,10 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			"POST",
 			credentialEndpoint,
 			newDPoPNonce,
-			access_token
+			flowState.access_token
 		);
 
-		const { jws } = await this.generateNonceProof(c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
+		const { jws } = await this.generateNonceProof(flowState.c_nonce, this.config.credentialIssuerIdentifier, this.config.clientId);
 		const credentialEndpointBody = {
 			"proof": {
 				"proof_type": "jwt",
@@ -173,13 +227,21 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 		}
 
 		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
-			"Authorization": `DPoP ${access_token}`,
+			"Authorization": `DPoP ${flowState.access_token}`,
 			"dpop": credentialEndpointDPoP,
 		});
 		const { credential } = credentialResponse.data;
 
+		console.log("Last cred res = ", credentialResponse.data)
 		try {
 			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
+			if (c_nonce) {
+				flowState.c_nonce_receival_date = new Date();
+				flowState.c_nonce = c_nonce;
+				flowState.c_nonce_expires_in = c_nonce_expires_in;
+				await this.openID4VCIClientStateRepository.store(flowState.id, flowState); // update the new c_nonce related values	
+			}
+
 			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
 				await this.storeCredential({
 					credentialIdentifier: generateRandomIdentifier(32),
@@ -196,10 +258,13 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 					doctype: flowState.selectedCredentialConfiguration.doctype,
 				});
 			}
+			console.log("New credential is stored")
+			return { received: true }
 		}
 		catch (err) {
 			console.error("Failed to recieve credential during issuance protocol");
 			console.error(err);
+			return { received: false }
 		}
 	}
 }
