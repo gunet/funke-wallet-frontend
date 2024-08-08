@@ -8,8 +8,10 @@ import { useApi } from '../api';
 import logo from '../assets/images/wallet_white.png';
 import { Trans, useTranslation } from 'react-i18next';
 import OnlineStatusContext from '../context/OnlineStatusContext';
+import { BackgroundTasksContext } from '../context/BackgroundTasksContext';
 import SessionContext from '../context/SessionContext';
 import { PiWifiHighBold, PiWifiSlashBold } from "react-icons/pi";
+import Spinner from './Spinner';
 
 const NavItem = ({
 	children,
@@ -31,6 +33,7 @@ const NavItem = ({
 
 const Sidebar = ({ isOpen, toggle }) => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { isLoading, addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const api = useApi();
 	const { logout } = useContext(SessionContext);
 	const { username, displayName } = api.getSession();
@@ -80,13 +83,17 @@ const Sidebar = ({ isOpen, toggle }) => {
 				</div>
 				<div>
 					<div className="hidden sm:flex justify-between items-center">
-						<button className='mb-2 mr-2' onClick={() => handleNavigate('/')}>
-							<img
-								src={logo}
-								alt="Logo"
-								className="w-20 h-22 cursor-pointer"
-							/>
-						</button>
+						{isLoading() ? (
+							<Spinner size='medium' />
+						) : (
+							<button className='mb-2 mr-2' onClick={() => handleNavigate('/')}>
+								<img
+									src={logo}
+									alt="Logo"
+									className="w-20 h-22 cursor-pointer"
+								/>
+							</button>
+						)}
 						<a href={('/')}
 							className="text-white text-xl font-bold cursor-pointer"
 						>

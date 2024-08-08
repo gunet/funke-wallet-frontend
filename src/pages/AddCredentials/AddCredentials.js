@@ -6,6 +6,7 @@ import RedirectPopup from '../../components/Popups/RedirectPopup';
 import QRButton from '../../components/Buttons/QRButton';
 import { useApi } from '../../api';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
+import { BackgroundTasksContext } from '../../context/BackgroundTasksContext';
 import { base64url } from 'jose';
 import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
 import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
@@ -28,6 +29,7 @@ const eIDClientURL = isMobile ? process.env.REACT_APP_OPENID4VCI_EID_CLIENT_URL.
 
 const Issuers = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const api = useApi(isOnline);
 	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
 
@@ -61,9 +63,12 @@ const Issuers = () => {
 		};
 
 		window.addEventListener('resize', handleResize);
-
+		addLoader();
 		getAllCredentialIssuerMetadata().then((issuers) => {
 			setCredentialIssuers(issuers);
+			removeLoader();
+		}).catch(err => {
+			removeLoader();
 		});
 
 		return () => {
