@@ -7,6 +7,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 
 import { CredentialsProvider } from './context/CredentialsContext';
+import { CommunicationProtocolsProvider } from './context/CommunicationProtocolsContext';
 import useCheckURL from './components/useCheckURL'; // Import the custom hook
 import handleServerMessagesGuard from './hoc/handleServerMessagesGuard';
 import HandlerNotification from './components/HandlerNotification';
@@ -75,7 +76,8 @@ function App() {
 	return (
 		<I18nextProvider i18n={i18n}>
 			<CredentialsProvider>
-				<Snowfalling />
+				<CommunicationProtocolsProvider>
+					<Snowfalling />
 					<Suspense fallback={<Spinner />}>
 						<HandlerNotification />
 						<Routes>
@@ -101,6 +103,7 @@ function App() {
 							<MessagePopup type={typeMessagePopup} message={textMessagePopup} onClose={() => setMessagePopup(false)} />
 						}
 					</Suspense>
+				</CommunicationProtocolsProvider>
 			</CredentialsProvider>
 		</I18nextProvider>
 	);

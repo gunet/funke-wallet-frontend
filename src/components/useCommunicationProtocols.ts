@@ -1,5 +1,5 @@
 import { base64url } from "jose";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { DIContainer } from "../lib/DIContainer";
 import { IHttpProxy } from "../lib/interfaces/IHttpProxy";
 import { IOpenID4VCIClient } from "../lib/interfaces/IOpenID4VCIClient";
@@ -18,53 +18,63 @@ import { OpenID4VPRelyingParty } from "../lib/services/OpenID4VPRelyingParty";
 import { MDoc } from "@auth0/mdl";
 import { IOpenID4VPRelyingPartyStateRepository } from "../lib/interfaces/IOpenID4VPRelyingPartyStateRepository";
 import { OpenID4VPRelyingPartyStateRepository } from "../lib/services/OpenID4VPRelyingPartyStateRepository";
-
+import SessionContext from "../context/SessionContext";
 
 export function useCommunicationProtocols() {
+	const { isLoggedIn } = useContext(SessionContext);
 
 	const api = useApi();
 	const keystore = useLocalStorageKeystore();
-	const [openID4VCIClients, setOpenID4VCIClients] = useState<{ [x: string]: IOpenID4VCIClient }>({});
 
 	const trustedCredentialIssuers = JSON.parse(new TextDecoder().decode(base64url.decode(process.env.REACT_APP_REGISTERED_CREDENTIAL_ISSUERS_JSON_B64U)));
+
 	const container = new DIContainer();
-	// Register services
 
-	container.register<IHttpProxy>('HttpProxy', HttpProxy);
-	container.register<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository', OpenID4VPRelyingPartyStateRepository);
+	const [protocols, setProtocols] = useState<{
+		httpProxy: IHttpProxy,
+		openID4VPRelyingParty: IOpenID4VPRelyingParty,
+		openID4VCIHelper: IOpenID4VCIHelper,
+		openID4VCIClients: { [x: string]: IOpenID4VCIClient }
+	}>(null);
 
-	container.register<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository', OpenID4VCIClientStateRepository);
-	container.register<IOpenID4VCIHelper>('OpenID4VCIHelper', OpenID4VCIHelper, container.resolve<IHttpProxy>('HttpProxy'));
+	async function initialize() {
+		// Register services
 
-	container.register<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty', OpenID4VPRelyingParty,
-		container.resolve<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository'),
-		async function getAllStoredVerifiableCredentials() {
-			const fetchAllCredentials = await api.get('/storage/vc');
-			return { verifiableCredentials: fetchAllCredentials.data.vc_list };
-		},
+		container.register<IHttpProxy>('HttpProxy', HttpProxy);
+		container.register<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository', OpenID4VPRelyingPartyStateRepository);
 
-		async function signJwtPresentationKeystoreFn(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }> {
-			return keystore.signJwtPresentation(nonce, audience, verifiableCredentials)
-		},
+		container.register<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository', OpenID4VCIClientStateRepository);
+		container.register<IOpenID4VCIHelper>('OpenID4VCIHelper', OpenID4VCIHelper, container.resolve<IHttpProxy>('HttpProxy'));
 
-		async function generateDeviceResponse(mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) {
-			return keystore.generateDeviceResponse(mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri);
-		},
+		container.register<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty', OpenID4VPRelyingParty,
+			container.resolve<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository'),
+			async function getAllStoredVerifiableCredentials() {
+				const fetchAllCredentials = await api.get('/storage/vc');
+				return { verifiableCredentials: fetchAllCredentials.data.vc_list };
+			},
 
-		async function storeVerifiablePresentation(presentation: string, format: string, presentationSubmission: any, audience: string) {
-			await api.post('/storage/vp', {
-				presentation,
-				format,
-				presentationSubmission,
-				issuanceDate: new Date().toISOString(),
-				audience,
-			});
-		}
-	);
+			async function signJwtPresentationKeystoreFn(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }> {
+				return keystore.signJwtPresentation(nonce, audience, verifiableCredentials)
+			},
 
-	container.register<OpenID4VCIClientFactory>('OpenID4VCIClientFactory', OpenID4VCIClientFactory,
-		container.resolve<IHttpProxy>('HttpProxy'),
-		container.resolve<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository'),
+			async function generateDeviceResponse(mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) {
+				return keystore.generateDeviceResponse(mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri);
+			},
+
+			async function storeVerifiablePresentation(presentation: string, format: string, presentationSubmission: any, audience: string) {
+				await api.post('/storage/vp', {
+					presentation,
+					format,
+					presentationSubmission,
+					issuanceDate: new Date().toISOString(),
+					audience,
+				});
+			}
+		);
+
+		container.register<OpenID4VCIClientFactory>('OpenID4VCIClientFactory', OpenID4VCIClientFactory,
+			container.resolve<IHttpProxy>('HttpProxy'),
+			container.resolve<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository'),
 			async (cNonce: string, audience: string, clientId: string): Promise<{ jws: string }> => {
 				const { proof_jwt } = await keystore.generateOpenid4vciProof(cNonce, audience, clientId)
 				return { jws: proof_jwt };
@@ -74,21 +84,20 @@ export function useCommunicationProtocols() {
 					...c
 				});
 			},
-	);
+		);
 
 
-	const httpProxy = container.resolve<IHttpProxy>('HttpProxy');
-	const helper = container.resolve<IOpenID4VCIHelper>('OpenID4VCIHelper');
+		const httpProxy = container.resolve<IHttpProxy>('HttpProxy');
+		const openID4VCIHelper = container.resolve<IOpenID4VCIHelper>('OpenID4VCIHelper');
 
-	const openID4VPRelyingParty = container.resolve<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty');
+		const openID4VPRelyingParty = container.resolve<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty');
 
-	async function initialize() {
 		let open4VCIClientsJson: { [x: string]: IOpenID4VCIClient } = {};
 
 		let clientConfigs: ClientConfig[] = await Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
 			const [authorizationServerMetadata, credentialIssuerMetadata] = await Promise.all([
-				helper.getAuthorizationServerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
-				helper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
+				openID4VCIHelper.getAuthorizationServerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
+				openID4VCIHelper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier).catch((err) => null),
 			]);
 			if (!authorizationServerMetadata || !credentialIssuerMetadata) {
 				return null;
@@ -112,19 +121,35 @@ export function useCommunicationProtocols() {
 			open4VCIClientsJson[config.credentialIssuerIdentifier] = openID4VCIClient;
 			console.log("Added client for " + config.credentialIssuerIdentifier)
 		}
-		return { open4VCIClientsJson };
+		return { open4VCIClientsJson, openID4VPRelyingParty, httpProxy, openID4VCIHelper };
 	}
 
 	useEffect(() => {
-		initialize().then(({ open4VCIClientsJson }) => {
-			setOpenID4VCIClients(open4VCIClientsJson);
-		});
+		if (isLoggedIn) {
+			initialize().then(({ open4VCIClientsJson, openID4VPRelyingParty, httpProxy, openID4VCIHelper }) => {
+				setProtocols({
+					openID4VCIClients: open4VCIClientsJson,
+					openID4VPRelyingParty,
+					httpProxy,
+					openID4VCIHelper
+				});
+			});
+		}
 	}, [])
+	useEffect(() => {
+		if (isLoggedIn) {
+			initialize().then(({ open4VCIClientsJson, openID4VPRelyingParty, httpProxy, openID4VCIHelper }) => {
+				setProtocols({
+					openID4VCIClients: open4VCIClientsJson,
+					openID4VPRelyingParty,
+					httpProxy,
+					openID4VCIHelper
+				});
+			});
+		}
+	}, [isLoggedIn])
 
 	return {
-		openID4VCIClients: openID4VCIClients,
-		openID4VCIHelper: helper,
-		httpProxy: httpProxy,
-		openID4VPRelyingParty: openID4VPRelyingParty
+		protocols
 	}
 }

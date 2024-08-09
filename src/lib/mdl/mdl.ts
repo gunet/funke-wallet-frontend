@@ -15,14 +15,13 @@ export const verifyMdocWithAllCerts = async (mdoc: MDoc) => {
 		return false;
 	}
 
-	console.log("CHAIN is valid")
 	try {
 		const pem = binaryToPem(chainDER[0]);
-		const importedCert =  await importCert(pem);
+		const importedCert = await importCert(pem);
 		const result = await issuerAuth.verify(importedCert)
 		return result;
 	}
-	catch(err) {
+	catch (err) {
 		console.log("MDOC verification failed")
 		console.error(err)
 		return false;

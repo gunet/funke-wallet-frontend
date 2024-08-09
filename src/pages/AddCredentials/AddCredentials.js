@@ -8,8 +8,8 @@ import { useApi } from '../../api';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
 import { BackgroundTasksContext } from '../../context/BackgroundTasksContext';
 import { base64url } from 'jose';
-import { useCommunicationProtocols } from '../../components/useCommunicationProtocols';
 import { useLocalStorageKeystore } from '../../services/LocalStorageKeystore';
+import CommunicationProtocolsContext from '../../context/CommunicationProtocolsContext';
 
 function highlightBestSequence(issuer, search) {
 	if (typeof issuer !== 'string' || typeof search !== 'string') {
@@ -31,7 +31,7 @@ const Issuers = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
 	const { addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const api = useApi(isOnline);
-	const { openID4VCIClients, openID4VCIHelper } = useCommunicationProtocols();
+	const { protocols } = useContext(CommunicationProtocolsContext);
 
 	const [searchQuery, setSearchQuery] = useState('');
 	const [issuers, setIssuers] = useState([]);
@@ -49,7 +49,7 @@ const Issuers = () => {
 
 	async function getAllCredentialIssuerMetadata() {
 		return Promise.all(trustedCredentialIssuers.map(async (credentialIssuer) => {
-			const { metadata } = await openID4VCIHelper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier);
+			const { metadata } = await protocols.openID4VCIHelper.getCredentialIssuerMetadata(credentialIssuer.credential_issuer_identifier);
 			return {
 				credentialIssuerIdentifier: credentialIssuer.credential_issuer_identifier,
 				selectedDisplay: metadata.display.filter((display) => display.locale === 'en-US')[0]
@@ -74,11 +74,8 @@ const Issuers = () => {
 		return () => {
 			window.removeEventListener('resize', handleResize);
 		};
-	}, []);
+	}, [protocols]);
 
-	useEffect(() => {
-		console.log("Credential issuers were mutated = ", credentialIssuers)
-	}, [credentialIssuers])
 
 	useEffect(() => {
 		const fetchIssuers = async () => {
@@ -113,7 +110,7 @@ const Issuers = () => {
 	const handleIssuerClick = async (credentialIssuerIdentifier) => {
 		const clickedIssuer = credentialIssuers.find((issuer) => issuer.credentialIssuerIdentifier === credentialIssuerIdentifier);
 		if (clickedIssuer) {
-			const cl = openID4VCIClients[credentialIssuerIdentifier];
+			const cl = protocols.openID4VCIClients[credentialIssuerIdentifier];
 			if (!cl) {
 				return;
 			}
@@ -134,7 +131,7 @@ const Issuers = () => {
 
 		console.log("Seelected issuer = ", selectedIssuer)
 		if (selectedIssuer && selectedIssuer.credentialIssuerIdentifier) {
-			const cl = openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
+			const cl = protocols.openID4VCIClients[selectedIssuer.credentialIssuerIdentifier];
 			console.log("Selected configuration = ", selectedConfiguration)
 			const userHandleB64u = keystore.getUserHandleB64u();
 			if (userHandleB64u == null) {
