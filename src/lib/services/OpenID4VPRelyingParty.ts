@@ -25,7 +25,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 	) { }
 
 
-	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" }> {
+	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION_URI" }> {
 		const authorizationRequest = new URL(url);
 		const client_id = authorizationRequest.searchParams.get('client_id');
 		const client_id_scheme = authorizationRequest.searchParams.get('client_id_scheme');
@@ -37,6 +37,9 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		const state = authorizationRequest.searchParams.get('state') as string;
 		const presentation_definition_uri = authorizationRequest.searchParams.get('presentation_definition_uri');
 
+		if (!presentation_definition_uri) {
+			return { err: "MISSING_PRESENTATION_DEFINITION_URI" };
+		}
 		const [presentationDefinitionFetch, vcList] = await Promise.all([axios.get(presentation_definition_uri), this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials)]);
 
 		const presentationDefinition = presentationDefinitionFetch.data;
