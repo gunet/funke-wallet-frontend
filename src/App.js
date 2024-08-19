@@ -100,7 +100,10 @@ function App() {
 							<PinInputPopup showPopup={showPinInputPopup} setShowPopup={setShowPinInputPopup} />
 						}
 						{showMessagePopup &&
-							<MessagePopup type={typeMessagePopup} message={textMessagePopup} onClose={() => setMessagePopup(false)} />
+							<MessagePopup type={typeMessagePopup} message={textMessagePopup} onClose={() => {
+								setMessagePopup(false)
+								window.location.href = '/'
+							}} />
 						}
 					</Suspense>
 				</CommunicationProtocolsProvider>

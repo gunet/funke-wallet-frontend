@@ -172,13 +172,12 @@ export class OpenID4VCIClient implements IOpenID4VCIClient {
 			credentialEndpointBody['doctype'] = flowState.selectedCredentialConfiguration.doctype;
 		}
 
-		const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
-			"Authorization": `DPoP ${access_token}`,
-			"dpop": credentialEndpointDPoP,
-		});
-		const { credential } = credentialResponse.data;
-
 		try {
+			const credentialResponse = await this.httpProxy.post(credentialEndpoint, credentialEndpointBody, {
+				"Authorization": `DPoP ${access_token}`,
+				"dpop": credentialEndpointDPoP,
+			});
+			const { credential } = credentialResponse.data;
 			const { c_nonce, c_nonce_expires_in } = credentialResponse.data;
 			if (flowState.selectedCredentialConfiguration.format == VerifiableCredentialFormat.SD_JWT_VC) {
 				await this.storeCredential({

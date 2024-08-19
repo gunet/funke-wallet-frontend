@@ -46,13 +46,13 @@ function useCheckURL(urlToCheck: string): {
 	const keystore = useLocalStorageKeystore();
 	const { t } = useTranslation();
 
-	useEffect(() => {
 
+	async function handle(urlToCheck: string) {
 		const u = new URL(urlToCheck);
-		if ((u.protocol == 'openid-credential-offer' || u.searchParams.get('credential_offer')) && isLoggedIn && protocols) {
+		if ((u.protocol == 'openid-credential-offer' || u.searchParams.get('credential_offer'))) {
 			for (const credentialIssuerIdentifier of Object.keys(protocols.openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
-				protocols.openID4VCIClients[credentialIssuerIdentifier].handleCredentialOffer(u.toString())
+				await protocols.openID4VCIClients[credentialIssuerIdentifier].handleCredentialOffer(u.toString())
 					.then(({ credentialIssuer, selectedCredentialConfigurationSupported }) => {
 						const userHandleB64u = keystore.getUserHandleB64u();
 						if (userHandleB64u == null) {
@@ -80,25 +80,25 @@ function useCheckURL(urlToCheck: string): {
 					.catch((err) => console.error(err));
 			}
 		}
-
-		if (protocols && urlToCheck && u.searchParams.get('code') && isLoggedIn) {
+		else if (u.searchParams.get('code')) {
 			for (const credentialIssuerIdentifier of Object.keys(protocols.openID4VCIClients)) {
 				console.log("Url to check = ", urlToCheck)
 				addLoader();
-				protocols.openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(urlToCheck)
+				await protocols.openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(urlToCheck)
 					.then(() => {
+						window.history.replaceState({}, '', `${window.location.pathname}`);
 						removeLoader();
 					})
 					.catch(err => {
 						console.log("Error during the handling of authorization response")
+						window.history.replaceState({}, '', `${window.location.pathname}`);
 						console.error(err)
 						removeLoader();
 					});
 			}
 		}
-
-		if (protocols && urlToCheck && isLoggedIn && protocols) {
-			protocols.openID4VPRelyingParty.handleAuthorizationRequest(urlToCheck).then((result) => {
+		else {
+			await protocols.openID4VPRelyingParty.handleAuthorizationRequest(urlToCheck).then((result) => {
 				if ('err' in result) {
 					if (result.err == "INSUFFICIENT_CREDENTIALS") {
 						setTextMessagePopup({ title: `${t('messagePopup.insufficientCredentials.title')}`, description: `${t('messagePopup.insufficientCredentials.description')}` });
@@ -109,6 +109,7 @@ function useCheckURL(urlToCheck: string): {
 				}
 				const { conformantCredentialsMap, verifierDomainName } = result;
 				const jsonedMap = Object.fromEntries(conformantCredentialsMap);
+				window.history.replaceState({}, '', `${window.location.pathname}`);
 				setVerifierDomainName(verifierDomainName);
 				setConformantCredentialsMap(jsonedMap);
 				setShowSelectCredentialsPopup(true);
@@ -118,19 +119,24 @@ function useCheckURL(urlToCheck: string): {
 			})
 		}
 
-		if (urlToCheck && isLoggedIn) {
-			const urlParams = new URLSearchParams(window.location.search);
-			const state = urlParams.get('state');
-			const error = urlParams.get('error');
+		const urlParams = new URLSearchParams(window.location.search);
+		const state = urlParams.get('state');
+		const error = urlParams.get('error');
+		if (urlToCheck && isLoggedIn && state && error) {
+			window.history.replaceState({}, '', `${window.location.pathname}`);
 			const errorDescription = urlParams.get('error_description');
-
-			if (state && error) {
-				setTextMessagePopup({ title: error, description: errorDescription });
-				setTypeMessagePopup('error');
-				setMessagePopup(true);
-			}
+			setTextMessagePopup({ title: error, description: errorDescription });
+			setTypeMessagePopup('error');
+			setMessagePopup(true);
 		}
+	}
 
+	useEffect(() => {
+		if (!isLoggedIn || !protocols || !urlToCheck || !keystore || !api || !t) {
+			return;
+		}
+		console.log("URL to check = ", urlToCheck)
+		handle(urlToCheck);
 	}, [api, keystore, t, urlToCheck, isLoggedIn, protocols]);
 
 	useEffect(() => {
