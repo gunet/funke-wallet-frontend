@@ -1,12 +1,11 @@
-import { MDoc, parse } from "@auth0/mdl";
+import { MDoc } from "@auth0/mdl";
 import { IOpenID4VPRelyingParty } from "../interfaces/IOpenID4VPRelyingParty";
 import axios from "axios";
 import { StorableCredential } from "../types/StorableCredential";
 import { Verify } from "../utils/Verify";
 import { HasherAlgorithm, HasherAndAlgorithm, SdJwt } from "@sd-jwt/core";
 import { VerifiableCredentialFormat } from "../schemas/vc";
-import { parseCredential } from "../../functions/parseCredential";
-import { convertToJSONWithMaps, parseMsoMdocCredential } from "../mdl/mdl";
+import { parseMsoMdocCredential } from "../mdl/mdl";
 import { JSONPath } from "jsonpath-plus";
 import { generateRandomIdentifier } from "../utils/generateRandomIdentifier";
 import { base64url } from "jose";
@@ -21,7 +20,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		private getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>,
 		private signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>,
 		private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>,
-		private storeVerifiablePresentation: (presentation: string, format: string, presentationSubmission: any, audience: string) => Promise<void>
+		private storeVerifiablePresentation: (presentation: string, format: string, identifiersOfIncludedCredentials: string[], presentationSubmission: any, audience: string) => Promise<void>
 	) { }
 
 
@@ -169,6 +168,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			);
 
 		let selectedVCs = [];
+		let originalVCs = [];
 		for (const [descriptor_id, credentialIdentifier] of selectionMap) {
 			const vcEntity = filteredVCEntities.filter((vc) => vc.credentialIdentifier == credentialIdentifier)[0];
 			if (vcEntity.format == VerifiableCredentialFormat.SD_JWT_VC) {
@@ -182,9 +182,10 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				).withHasher(hasherAndAlgorithm)
 				const presentation = await sdJwt.present(presentationFrame);
 				selectedVCs.push(presentation);
+				originalVCs.push(vcEntity);
 			}
 			else if (vcEntity.format == VerifiableCredentialFormat.MSO_MDOC) {
-				const submission = {
+				const presentationSubmission = {
 					"definition_id": presentationDefinition.id,
 					"id": vcEntity.doctype,
 					"descriptor_map": [
@@ -200,7 +201,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				const encodedDeviceResponse = base64url.encode(deviceResponseMDoc.encode());
 				const formData = new URLSearchParams();
 				formData.append('vp_token', encodedDeviceResponse);
-				formData.append('presentation_submission', JSON.stringify(submission));
+				formData.append('presentation_submission', JSON.stringify(presentationSubmission));
 				formData.append('state', state);
 
 				const res = await axios.post(response_uri, formData.toString(), {
@@ -209,19 +210,16 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 						'Content-Type': 'application/x-www-form-urlencoded',
 					}
 				});
-				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", submission, new URL(S.response_uri).hostname);
+				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [ vcEntity.credentialIdentifier ], presentationSubmission, new URL(S.response_uri).hostname);
 
 				if (res.data.redirect_uri) {
 					return { url: res.data.redirect_uri };
 				}
 			}
-			else {
-				selectedVCs.push(vcEntity.credential);
-			}
 		}
 
 		const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, selectedVCs);
-		const { conformingCredentials, presentationSubmission } = await Verify.getMatchesForPresentationDefinition(vpjwt, presentationDefinition);
+		const { presentationSubmission } = await Verify.getMatchesForPresentationDefinition(vpjwt, presentationDefinition);
 
 
 		const formData = new URLSearchParams();
@@ -235,7 +233,14 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			}
 		});
-		await this.storeVerifiablePresentation(vpjwt, "jwt_vp", presentationSubmission, new URL(S.response_uri).hostname);
+		const credentialHashes = await Promise.all(originalVCs.map((vc) => 
+			crypto.subtle.digest('SHA-256', new TextEncoder().encode(vc.credential)).then((v) => btoa(
+				new Uint8Array(v)
+					.reduce((data, byte) => data + String.fromCharCode(byte), '')
+			))
+		));
+		const credentialIdentifiers = originalVCs.map((vc) => vc.credentialIdentifier);
+		await this.storeVerifiablePresentation(vpjwt, "jwt_vp", credentialIdentifiers, presentationSubmission, new URL(S.response_uri).hostname);
 
 		if (res.data.redirect_uri) {
 			return { url: res.data.redirect_uri };

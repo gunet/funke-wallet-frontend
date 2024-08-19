@@ -11,10 +11,10 @@ import { useApi } from '../../api';
 
 import CredentialInfo from '../../components/Credentials/CredentialInfo';
 import { formatDate } from '../../functions/DateFormat';
-import { base64url } from 'jose';
 import { CredentialImage } from '../../components/Credentials/CredentialImage';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
-import { JSONPath } from 'jsonpath-plus';
+import CredentialsContext from '../../context/CredentialsContext';
+import { generateRandomIdentifier } from '../../lib/utils/generateRandomIdentifier';
 
 const History = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
@@ -26,6 +26,7 @@ const History = () => {
 	const [currentSlide, setCurrentSlide] = useState(1);
 
 	const { t } = useTranslation();
+	const { vcEntityList, latestCredentials, getData } = useContext(CredentialsContext);
 
 	const sliderRef = useRef();
 
@@ -44,36 +45,20 @@ const History = () => {
 		style: { margin: '0 10px' },
 	};
 
+
+	useEffect(() => {
+		getData();
+	}, [getData]);
+
 	const handleHistoryItemClick = async (item) => {
-		let vcEntities = [];
-		// Export all credentials from the presentation
-		if (item.format == "jwt_vp") {
-			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
-				base64url.decode(item.presentation.split('.')[1])
-			));
-
-			vcEntities = item.presentationSubmission.descriptor_map.map(({ id, path, format }) => {
-				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
-				console.log("FOUND = ", findCredentialByPath)
-				if (!findCredentialByPath) {
-					throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
+			const vcEntities = await Promise.all(item.includedVerifiableCredentialIdentifiers.map(async (id) => {
+			for (const vcEntity of vcEntityList) {
+				if (id == vcEntity.credentialIdentifier) {
+					return vcEntity;
 				}
-				return {
-					format: format,
-					credential: findCredentialByPath,
-				}
-			})
-		}
-		else if (item.format == "mso_mdoc") {
-			// reusing the StorableCredential data type to pass the mso mdoc device respose
-			vcEntities = [{
-				format: "mso_mdoc",
-				credential: item.presentation,
-				credentialIdentifier: "",
-				doctype: ""
-			}];
-		}
-
+			}
+			return null;
+		}));
 
 		// Set matching credentials and show the popup
 		setMatchingCredentials(vcEntities);
@@ -157,14 +142,14 @@ const History = () => {
 						<Slider ref={sliderRef} {...settings}>
 							{matchingCredentials.map((vcEntity, index) => (
 								<>
-									<React.Fragment key={vcEntity.id}>
+									<React.Fragment key={vcEntity ? vcEntity?.id : "unavailable-" + generateRandomIdentifier(6) }>
 										{(currentSlide === index + 1 ? 'button' : 'div')
 											.split()
 											.map(Tag => (
 												<>
 													<div
 														className="relative rounded-xl xl:w-full md:w-full sm:w-full overflow-hidden transition-shadow shadow-md hover:shadow-lg w-full mb-2"
-														aria-label={`${vcEntity.friendlyName}`}
+														aria-label={`${vcEntity ? vcEntity?.friendlyName : "Credential is deleted" }`}
 													>
 														<CredentialImage credential={vcEntity} className={"w-full h-full object-cover rounded-xl"} />
 													</div>
