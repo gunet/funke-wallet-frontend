@@ -65,16 +65,13 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 
 	const [parsedCredential, setParsedCredential] = useState(null);
 
-	useEffect(() => {
-		parseCredential(credential, true).then((c) => {
-			setParsedCredential(c);
-		});
-	}, []);
 
 	useEffect(() => {
-		parseCredential(credential, true).then((c) => {
-			setParsedCredential(c);
-		});
+		if (credential) {
+			parseCredential(credential, true).then((c) => {
+				setParsedCredential(c);
+			});
+		}
 	}, [credential]);
 
 	return (
@@ -84,8 +81,8 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 					{parsedCredential && (
 						<>
 							{parsedCredential?.issuance_date && renderRow('issuanceDate', 'Issuance', formatDate(parsedCredential?.issuance_date))}
-							{parsedCredential?.iat && renderRow('issuanceDate', 'Issuance', formatDate(parsedCredential?.iat))}
-							{parsedCredential?.exp && renderRow('expdate', 'Expiration', formatDate(parsedCredential?.exp))}
+							{parsedCredential?.iat && renderRow('issuanceDate', 'Issuance', formatDate(new Date(parsedCredential?.iat * 1000)))}
+							{parsedCredential?.exp && renderRow('expdate', 'Expiration', formatDate(new Date(parsedCredential?.exp * 1000)))}
 							{parsedCredential?.expiry_date && renderRow('expdate', 'Expiration', formatDate(parsedCredential?.expiry_date))}
 							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
