@@ -8,9 +8,11 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 	const [parsedCredential, setParsedCredential] = useState(null);
 
 	useEffect(() => {
-		parseCredential(credential).then((c) => {
-			setParsedCredential(c);
-		});
+		if (credential) {
+			parseCredential(credential).then((c) => {
+				setParsedCredential(c);
+			});
+		}
 	}, [credential]);
 
 	return (
@@ -23,6 +25,7 @@ export const CredentialImage = ({ credential, className, onClick, showRibbon = t
 					}
 				</>
 			)}
+			{!parsedCredential && <div className={className}>Credential is deleted</div>}
 		</>
 	);
 };
