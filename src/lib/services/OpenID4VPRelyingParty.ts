@@ -210,7 +210,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 						'Content-Type': 'application/x-www-form-urlencoded',
 					}
 				});
-				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [ vcEntity.credentialIdentifier ], presentationSubmission, new URL(S.response_uri).hostname);
+				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [vcEntity.credentialIdentifier], presentationSubmission, new URL(S.response_uri).hostname);
 
 				if (res.data.redirect_uri) {
 					return { url: res.data.redirect_uri };
@@ -233,7 +233,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			}
 		});
-		const credentialHashes = await Promise.all(originalVCs.map((vc) => 
+		const credentialHashes = await Promise.all(originalVCs.map((vc) =>
 			crypto.subtle.digest('SHA-256', new TextEncoder().encode(vc.credential)).then((v) => btoa(
 				new Uint8Array(v)
 					.reduce((data, byte) => data + String.fromCharCode(byte), '')
