@@ -136,18 +136,6 @@ export function useCommunicationProtocols() {
 				});
 			});
 		}
-	}, [])
-	useEffect(() => {
-		if (isLoggedIn) {
-			initialize().then(({ open4VCIClientsJson, openID4VPRelyingParty, httpProxy, openID4VCIHelper }) => {
-				setProtocols({
-					openID4VCIClients: open4VCIClientsJson,
-					openID4VPRelyingParty,
-					httpProxy,
-					openID4VCIHelper
-				});
-			});
-		}
 	}, [isLoggedIn])
 
 	return {
