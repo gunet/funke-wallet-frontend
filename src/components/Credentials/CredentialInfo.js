@@ -90,6 +90,7 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.birth_place)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
+							{renderRow('issuingCountry', 'Issuing Authority', parsedCredential?.issuing_authority)}
 							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
