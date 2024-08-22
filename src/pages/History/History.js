@@ -15,6 +15,8 @@ import { CredentialImage } from '../../components/Credentials/CredentialImage';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
 import CredentialsContext from '../../context/CredentialsContext';
 import { generateRandomIdentifier } from '../../lib/utils/generateRandomIdentifier';
+import { JSONPath } from 'jsonpath-plus';
+import { base64url } from 'jose';
 
 const History = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
@@ -51,15 +53,27 @@ const History = () => {
 	}, [getData]);
 
 	const handleHistoryItemClick = async (item) => {
-			const vcEntities = await Promise.all(item.includedVerifiableCredentialIdentifiers.map(async (id) => {
-			for (const vcEntity of vcEntityList) {
-				if (id == vcEntity.credentialIdentifier) {
-					return vcEntity;
-				}
-			}
-			return null;
-		}));
 
+
+		let vcEntities = [];
+		if (item.format == "jwt_vp") {
+			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
+				base64url.decode(item.presentation.split('.')[1])
+			));
+			vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
+				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
+				if (!findCredentialByPath) {
+					throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
+				}
+				return {
+					format: format,
+					credential: findCredentialByPath,
+				}
+			})
+		}
+		else if (item.format == "mso_mdoc") {
+			vcEntities = [ { format: "mso_mdoc", credential: item.presentation } ]
+		}
 		// Set matching credentials and show the popup
 		setMatchingCredentials(vcEntities);
 		setImageModalOpen(true);
