@@ -159,8 +159,8 @@ type WebauthnPrfEncryptionKeyInfoV1 = WebauthnPrfSaltInfo & WebauthnPrfEncryptio
 }
 export type WebauthnPrfEncryptionKeyInfoV2 = (
 	WebauthnPrfSaltInfo
-		& WebauthnPrfEncryptionKeyDeriveKeyParams
-		& StaticEncapsulationInfo
+	& WebauthnPrfEncryptionKeyDeriveKeyParams
+	& StaticEncapsulationInfo
 );
 export function isPrfKeyV2(prfKeyInfo: WebauthnPrfEncryptionKeyInfo): prfKeyInfo is WebauthnPrfEncryptionKeyInfoV2 {
 	return (
@@ -765,7 +765,7 @@ export async function upgradePrfKey(
 	prfKeyInfo: WebauthnPrfEncryptionKeyInfoV1,
 	promptForPrfRetry: () => Promise<boolean | AbortSignal>,
 ): Promise<EncryptedContainer> {
-	const [prfKey,, prfCredential] = await getPrfKey(
+	const [prfKey, , prfCredential] = await getPrfKey(
 		{
 			...privateData,
 			prfKeys: privateData.prfKeys.filter((keyInfo) => (
@@ -1067,8 +1067,8 @@ async function createDid(publicKey: CryptoKey, didKeyVersion: DidKeyVersion): Pr
 
 export async function signJwtPresentation([privateData, mainKey]: [PrivateData, CryptoKey], nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }> {
 	const inputJwt = SdJwt.fromCompact(verifiableCredentials[0]);
-	const { cnf } = inputJwt.payload as { cnf?: { jwk?: JWK }};
-	
+	const { cnf } = inputJwt.payload as { cnf?: { jwk?: JWK } };
+
 	if (!cnf?.jwk) {
 		throw new Error("Holder public key could not be resolved from cnf.jwk attribute");
 	}
@@ -1118,10 +1118,10 @@ export async function generateOpenid4vciProof(
 	const { kid, did } = keypair;
 
 	const jws = await new SignJWT({
-			nonce: nonce,
-			aud: audience,
-			iss: issuer,
-		})
+		nonce: nonce,
+		aud: audience,
+		iss: issuer,
+	})
 		.setProtectedHeader({
 			alg: keypair.alg,
 			typ: "openid4vci-proof+jwt",
@@ -1150,11 +1150,11 @@ export async function generateDeviceResponse([privateData, mainKey]: [PrivateDat
 	const { alg, did, wrappedPrivateKey } = keypair;
 	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, mainKey, true);
 	const privateKeyJwk = await crypto.subtle.exportKey("jwk", privateKey);
-	
+
 	const deviceResponseMDoc = await DeviceResponse.from(mdocCredential)
 		.usingPresentationDefinition(presentationDefinition)
 		.usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])
-		.authenticateWithSignature({...privateKeyJwk, alg} as JWK, alg as 'ES256')
+		.authenticateWithSignature({ ...privateKeyJwk, alg } as JWK, alg as 'ES256')
 		.sign();
 	return { deviceResponseMDoc };
 }
