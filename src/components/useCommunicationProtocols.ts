@@ -77,7 +77,9 @@ export function useCommunicationProtocols() {
 			container.resolve<IHttpProxy>('HttpProxy'),
 			container.resolve<IOpenID4VCIClientStateRepository>('OpenID4VCIClientStateRepository'),
 			async (cNonce: string, audience: string, clientId: string): Promise<{ jws: string }> => {
-				const { proof_jwt } = await keystore.generateOpenid4vciProof(cNonce, audience, clientId)
+				const [{ proof_jwt }, newPrivateData, keystoreCommit] = await keystore.generateOpenid4vciProof(cNonce, audience, clientId);
+				await api.updatePrivateData(newPrivateData);
+				await keystoreCommit();
 				return { jws: proof_jwt };
 			},
 			async (c: StorableCredential) => {
