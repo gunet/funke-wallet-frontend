@@ -11,20 +11,24 @@ import { useApi } from '../../api';
 
 import CredentialInfo from '../../components/Credentials/CredentialInfo';
 import { formatDate } from '../../functions/DateFormat';
-import { base64url } from 'jose';
 import { CredentialImage } from '../../components/Credentials/CredentialImage';
 import OnlineStatusContext from '../../context/OnlineStatusContext';
+import CredentialsContext from '../../context/CredentialsContext';
+import { generateRandomIdentifier } from '../../lib/utils/generateRandomIdentifier';
+import { JSONPath } from 'jsonpath-plus';
+import { base64url } from 'jose';
 
 const History = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
 	const api = useApi(isOnline);
 	const [history, setHistory] = useState([]);
-	const [matchingCredentials, setMatchingCredentials] = useState([]);
+	const [matchingCredentials, setMatchingCredentials] = useState([]); // an array of StorableCredential objects
 	const [isImageModalOpen, setImageModalOpen] = useState(false);
 
 	const [currentSlide, setCurrentSlide] = useState(1);
 
 	const { t } = useTranslation();
+	const { vcEntityList, latestCredentials, getData } = useContext(CredentialsContext);
 
 	const sliderRef = useRef();
 
@@ -43,16 +47,35 @@ const History = () => {
 		style: { margin: '0 10px' },
 	};
 
+
+	useEffect(() => {
+		getData();
+	}, [getData]);
+
 	const handleHistoryItemClick = async (item) => {
-		// Export all credentials from the presentation
-		const vpTokenPayload = JSON.parse(new TextDecoder().decode(
-			base64url.decode(item.presentation.split('.')[1])
-		));
 
-		const verifiableCredentials = vpTokenPayload.vp.verifiableCredential; // in raw format
 
+		let vcEntities = [];
+		if (item.format == "jwt_vp") {
+			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
+				base64url.decode(item.presentation.split('.')[1])
+			));
+			vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
+				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
+				if (!findCredentialByPath) {
+					throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
+				}
+				return {
+					format: format,
+					credential: findCredentialByPath,
+				}
+			})
+		}
+		else if (item.format == "mso_mdoc") {
+			vcEntities = [ { format: "mso_mdoc", credential: item.presentation } ]
+		}
 		// Set matching credentials and show the popup
-		setMatchingCredentials(verifiableCredentials);
+		setMatchingCredentials(vcEntities);
 		setImageModalOpen(true);
 	};
 
@@ -63,13 +86,9 @@ const History = () => {
 				console.log(fetchedPresentations.vp_list);
 				// Extract and map the vp_list from fetchedPresentations.
 				const vpListFromApi = fetchedPresentations.vp_list
-					.sort((vpA, vpB) => vpB.issuanceDate - vpA.issuanceDate)
+					.sort((vpA, vpB) => new Date(vpB.issuanceDate) - new Date(vpA.issuanceDate))
 					.map((item) => ({
-						id: item.id,
-						presentation: item.presentation,
-						// ivci: item.includedVerifiableCredentialIdentifiers,
-						audience: item.audience,
-						issuanceDate: item.issuanceDate,
+						...item
 					}));
 
 				setHistory(vpListFromApi);
@@ -105,7 +124,7 @@ const History = () => {
 								onClick={() => handleHistoryItemClick(item)}
 							>
 								<div className="font-bold">{item.audience}</div>
-								<div>{formatDate(new Date(item.issuanceDate * 1000).toISOString())}</div>
+								<div>{formatDate(new Date(item.issuanceDate).toISOString())}</div>
 							</button>
 						))}
 					</div>
@@ -137,14 +156,14 @@ const History = () => {
 						<Slider ref={sliderRef} {...settings}>
 							{matchingCredentials.map((vcEntity, index) => (
 								<>
-									<React.Fragment key={vcEntity.id}>
+									<React.Fragment key={vcEntity ? vcEntity?.id : "unavailable-" + generateRandomIdentifier(6) }>
 										{(currentSlide === index + 1 ? 'button' : 'div')
 											.split()
 											.map(Tag => (
 												<>
 													<div
 														className="relative rounded-xl xl:w-full md:w-full sm:w-full overflow-hidden transition-shadow shadow-md hover:shadow-lg w-full mb-2"
-														aria-label={`${vcEntity.friendlyName}`}
+														aria-label={`${vcEntity ? vcEntity?.friendlyName : "Credential is deleted" }`}
 													>
 														<CredentialImage credential={vcEntity} className={"w-full h-full object-cover rounded-xl"} />
 													</div>

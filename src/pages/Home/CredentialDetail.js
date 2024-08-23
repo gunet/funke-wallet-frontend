@@ -43,7 +43,7 @@ const CredentialDetail = () => {
 
 	useEffect(() => {
 		if (vcEntity && vcEntity.credential) {
-			extractCredentialFriendlyName(vcEntity.credential).then((name) => {
+			extractCredentialFriendlyName(vcEntity).then((name) => {
 				setCredentialFriendlyName(name);
 			});
 		}
@@ -88,7 +88,7 @@ const CredentialDetail = () => {
 								aria-label={`${credentialFiendlyName}`}
 								title={t('pageCredentials.credentialFullScreenTitle', { friendlyName: credentialFiendlyName })}
 							>
-								<CredentialImage credential={vcEntity.credential} className={"w-full object-cover rounded-xl"} />
+								<CredentialImage credential={{...vcEntity}} className={"w-full object-cover rounded-xl"} />
 							</button>
 						) : (
 							<></>
@@ -96,14 +96,14 @@ const CredentialDetail = () => {
 					</div>
 
 					{/* Block 2: Information List */}
-					{vcEntity && <CredentialInfo credential={vcEntity.credential} />} {/* Use the CredentialInfo component */}
+					{vcEntity && <CredentialInfo credential={{...vcEntity}} />} {/* Use the CredentialInfo component */}
 				</div>
 
 				<CredentialDeleteButton onDelete={() => { setShowDeletePopup(true); }} />
 
 				<div className="flex flex-col lg:flex-row mt-4">
 					<div className="lg:w-1/2">
-						{vcEntity && <CredentialJson credential={vcEntity.credential} />}
+						{vcEntity && <CredentialJson credential={{...vcEntity}} />}
 					</div>
 				</div>
 			</div>
@@ -114,7 +114,7 @@ const CredentialDetail = () => {
 					isOpen={showFullscreenImgPopup}
 					onClose={() => setShowFullscreenImgPopup(false)}
 					content={
-						<CredentialImage credential={vcEntity.credential} className={"max-w-full max-h-full rounded-xl"} showRibbon={false} />
+						<CredentialImage credential={{...vcEntity}} className={"max-w-full max-h-full rounded-xl"} showRibbon={false} />
 					}
 				/>
 			)}

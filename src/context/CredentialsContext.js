@@ -16,7 +16,7 @@ export const CredentialsProvider = ({ children }) => {
 			const response = await api.get('/storage/vc');
 			const fetchedVcList = response.data.vc_list;
 			const vcEntityList = await Promise.all(fetchedVcList.map(async vcEntity => {
-				const name = await extractCredentialFriendlyName(vcEntity.credential);
+				const name = await extractCredentialFriendlyName(vcEntity);
 				return { ...vcEntity, friendlyName: name };
 			}));
 			vcEntityList.sort((vcA, vcB) => new Date(vcB.issuanceDate) - new Date(vcA.issuanceDate));

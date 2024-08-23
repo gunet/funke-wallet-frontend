@@ -8,6 +8,7 @@ import { useOnUserInactivity } from "../components/useOnUserInactivity";
 
 import * as keystore from "./keystore";
 import type { AsymmetricEncryptedContainer, AsymmetricEncryptedContainerKeys, EncryptedContainer, OpenedContainer, PrivateData, UnlockSuccess, WebauthnPrfEncryptionKeyInfo, WebauthnPrfSaltInfo, WrappedKeyInfo } from "./keystore";
+import { MDoc } from "@auth0/mdl";
 
 
 type UserData = {
@@ -63,14 +64,17 @@ export interface LocalStorageKeystore {
 	): Promise<[CryptoKey, WrappedKeyInfo]>,
 	upgradePrfKey(prfKeyInfo: WebauthnPrfEncryptionKeyInfo, promptForPrfRetry: () => Promise<boolean | AbortSignal>): Promise<[EncryptedContainer, CommitCallback]>,
 	getCachedUsers(): CachedUser[],
+	getUserHandleB64u(): string | null,
 	forgetCachedUser(user: CachedUser): void,
 
 	signJwtPresentation(nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }>,
-	generateOpenid4vciProof(nonce: string, audience: string): Promise<[
+	generateOpenid4vciProof(nonce: string, audience: string, issuer: string): Promise<[
 		{ proof_jwt: string },
 		AsymmetricEncryptedContainer,
 		CommitCallback,
 	]>,
+	generateDeviceResponse(mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string): Promise<{ deviceResponseMDoc: MDoc }>,
+
 }
 
 /** A stateful wrapper around the keystore module, storing state in the browser's localStorage and sessionStorage. */
@@ -355,6 +359,10 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 			return [...(cachedUsers || [])];
 		},
 
+		getUserHandleB64u: (): string | null => {
+			return (userHandleB64u);
+		},
+
 		forgetCachedUser: (user: CachedUser): void => {
 			setCachedUsers((cachedUsers) => cachedUsers.filter((cu) => cu.userHandleB64u !== user.userHandleB64u));
 		},
@@ -363,7 +371,7 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 			await keystore.signJwtPresentation(await openPrivateData(), nonce, audience, verifiableCredentials)
 		),
 
-		generateOpenid4vciProof: async (nonce: string, audience: string): Promise<[
+		generateOpenid4vciProof: async (nonce: string, audience: string, issuer: string): Promise<[
 			{ proof_jwt: string },
 			AsymmetricEncryptedContainer,
 			CommitCallback,
@@ -374,8 +382,13 @@ export function useLocalStorageKeystore(): LocalStorageKeystore {
 					config.DID_KEY_VERSION,
 					nonce,
 					audience,
+					issuer
 				),
 			)
+		),
+
+		generateDeviceResponse: async (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string): Promise<{ deviceResponseMDoc: MDoc }> => (
+			await keystore.generateDeviceResponse(await openPrivateData(), mdocCredential, presentationDefinition, mdocGeneratedNonce, verifierGeneratedNonce, clientId, responseUri)
 		),
 	};
 }
