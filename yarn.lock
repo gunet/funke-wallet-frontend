@@ -29,9 +29,9 @@
     jsonpointer "^5.0.0"
     leven "^3.1.0"
 
-"@auth0/mdl@./auth0-mdl-v0.3.0-wwwallet-build.tgz":
-  version "0.3.0-wwwallet-build"
-  resolved "./auth0-mdl-v0.3.0-wwwallet-build.tgz#d1dca67765eef88f3dc85f770b104a2fb6a3e890"
+"@auth0/mdl@./auth0-mdl-v0.3.0-wwwallet-build-1722929256.tgz":
+  version "0.3.0-wwwallet-build-1722929256"
+  resolved "./auth0-mdl-v0.3.0-wwwallet-build-1722929256.tgz#8cb9e4accc1d68bbcfa1195fd98e34d70ac94e06"
   dependencies:
     "@noble/curves" "^1.2.0"
     "@panva/hkdf" "^1.1.1"
