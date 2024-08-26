@@ -8,15 +8,18 @@ import { VerifiableCredentialFormat } from "../schemas/vc";
 import { parseMsoMdocCredential } from "../mdl/mdl";
 import { JSONPath } from "jsonpath-plus";
 import { generateRandomIdentifier } from "../utils/generateRandomIdentifier";
-import { base64url } from "jose";
+import { base64url, jwtDecrypt, jwtVerify } from "jose";
 import { OpenID4VPRelyingPartyState } from "../types/OpenID4VPRelyingPartyState";
 import { OpenID4VPRelyingPartyStateRepository } from "./OpenID4VPRelyingPartyStateRepository";
+import { IHttpProxy } from "../interfaces/IHttpProxy";
+import { parseCredential } from "../../functions/parseCredential";
 
 export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 
 	constructor(
 		private openID4VPRelyingPartyStateRepository: OpenID4VPRelyingPartyStateRepository,
+		private httpProxy: IHttpProxy,
 		private getAllStoredVerifiableCredentials: () => Promise<{ verifiableCredentials: StorableCredential[] }>,
 		private signJwtPresentationKeystoreFn: (nonce: string, audience: string, verifiableCredentials: any[]) => Promise<{ vpjwt: string }>,
 		private generateDeviceResponseFn: (mdocCredential: MDoc, presentationDefinition: any, mdocGeneratedNonce: string, verifierGeneratedNonce: string, clientId: string, responseUri: string) => Promise<{ deviceResponseMDoc: MDoc }>,
@@ -26,25 +29,51 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION_URI" }> {
 		const authorizationRequest = new URL(url);
-		const client_id = authorizationRequest.searchParams.get('client_id');
-		const client_id_scheme = authorizationRequest.searchParams.get('client_id_scheme');
-		const response_type = authorizationRequest.searchParams.get('response_type');
-		const response_mode = authorizationRequest.searchParams.get('response_mode');
-		const response_uri = authorizationRequest.searchParams.get('response_uri');
-		const scope = authorizationRequest.searchParams.get('scope');
-		const nonce = authorizationRequest.searchParams.get('nonce');
-		const state = authorizationRequest.searchParams.get('state') as string;
-		const presentation_definition_uri = authorizationRequest.searchParams.get('presentation_definition_uri');
+		let client_id = authorizationRequest.searchParams.get('client_id');
+		let client_id_scheme = authorizationRequest.searchParams.get('client_id_scheme');
+		let response_type = authorizationRequest.searchParams.get('response_type');
+		let response_mode = authorizationRequest.searchParams.get('response_mode');
+		let response_uri = authorizationRequest.searchParams.get('response_uri');
+		let scope = authorizationRequest.searchParams.get('scope');
+		let nonce = authorizationRequest.searchParams.get('nonce');
+		let state = authorizationRequest.searchParams.get('state') as string;
+		let presentation_definition = authorizationRequest.searchParams.get('presentation_definition') ? JSON.parse(authorizationRequest.searchParams.get('presentation_definition')) : null;
+		let presentation_definition_uri = authorizationRequest.searchParams.get('presentation_definition_uri');
 
-		if (!presentation_definition_uri) {
-			return { err: "MISSING_PRESENTATION_DEFINITION_URI" };
+		let client_metadata = {};
+
+		if (presentation_definition_uri) {
+			const presentationDefinitionFetch = await this.httpProxy.get(presentation_definition_uri, {});
+			presentation_definition = presentationDefinitionFetch.data;
 		}
-		const [presentationDefinitionFetch, vcList] = await Promise.all([axios.get(presentation_definition_uri), this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials)]);
 
-		const presentationDefinition = presentationDefinitionFetch.data;
+		const request_uri = authorizationRequest.searchParams.get('request_uri');
+
+
+		if (request_uri) {
+			const requestUriResponse = await this.httpProxy.get(request_uri, {});
+			const requestObject = requestUriResponse.data; // jwt
+			const [header, payload, sig] = requestObject.split('.');
+			const p = JSON.parse(new TextDecoder().decode(base64url.decode(payload)));
+			console.log("Payload = ", p)
+			client_id = p.client_id;
+			client_id_scheme = p.client_id_scheme;
+			response_type = p.response_type;
+			presentation_definition = p.presentation_definition;
+			response_mode = p.response_mode;
+			response_uri = p.response_uri ?? p.redirect_uri;
+			state = p.state;
+			nonce = p.nonce;
+			client_metadata = p.client_metadata;
+			console.log("DEF = ", presentation_definition)
+		}
+
+		const vcList = await this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials);
+
+		console.log("Presentation definition = ", presentation_definition)
 
 		await this.openID4VPRelyingPartyStateRepository.store(new OpenID4VPRelyingPartyState(
-			presentationDefinition,
+			presentation_definition,
 			nonce,
 			response_uri,
 			client_id,
@@ -57,17 +86,25 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		// localStorage.setItem("state", state);
 
 		const mapping = new Map<string, { credentials: string[], requestedFields: string[] }>();
-		for (const descriptor of presentationDefinition.input_descriptors) {
+		for (const descriptor of presentation_definition.input_descriptors) {
 			console.log("Descriptor :")
 			console.dir(descriptor, { depth: null })
 			const conformingVcList = []
 			for (const vc of vcList) {
 				console.log("VC = ", vc)
 				try {
-					if (vc.format == VerifiableCredentialFormat.SD_JWT_VC && VerifiableCredentialFormat.SD_JWT_VC in descriptor.format && Verify.verifyVcJwtWithDescriptor(descriptor, vc.credential)) {
-						conformingVcList.push(vc.credentialIdentifier);
+
+					if (vc.format == VerifiableCredentialFormat.SD_JWT_VC && (descriptor.format == undefined || VerifiableCredentialFormat.SD_JWT_VC in descriptor.format)) {
+						const parsed = await parseCredential({ credential: vc.credential, format: vc.format, vct: vc.vct, credentialIdentifier: "random" });
+						console.log("Parsed =  ", parsed)
+						if (Verify.verifyVcJwtWithDescriptor(descriptor, parsed)) {
+							console.log("Conforming .........")
+							conformingVcList.push(vc.credentialIdentifier);
+							continue;
+						}
 					}
-					else if (vc.format == VerifiableCredentialFormat.MSO_MDOC && VerifiableCredentialFormat.MSO_MDOC in descriptor.format) {
+
+					if (vc.format == VerifiableCredentialFormat.MSO_MDOC && (descriptor.format == undefined || VerifiableCredentialFormat.MSO_MDOC in descriptor.format)) {
 						console.log("Credential to be mdoc parsed = ", vc.credential)
 						const parsed = await parseMsoMdocCredential(vc.credential, vc.doctype);
 						const ns = parsed.documents[0].getIssuerNameSpace(vc.doctype);
@@ -82,10 +119,11 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 						console.log("Fields with value = ", fieldsWithValue)
 
 						if (fieldsWithValue.map((fwv) => fwv.val).includes(undefined)) {
-							return { err: "INSUFFICIENT_CREDENTIALS" }; // there is at least one field missing from the requirements
+							continue; // there is at least one field missing from the requirements
 						}
 
 						conformingVcList.push(vc.credentialIdentifier);
+						continue;
 					}
 				}
 				catch (err) {
@@ -101,7 +139,9 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				.map((field) => field.name)
 			mapping.set(descriptor.id, { credentials: [...conformingVcList], requestedFields: requestedFieldNames });
 		}
-		const verifierDomainName = new URL(response_uri).hostname;
+
+		console.log("Response uri = ", response_uri)
+		const verifierDomainName = client_id;
 		if (mapping.size == 0) {
 			console.log("Credentials don't satisfy any descriptor")
 			throw new Error("Credentials don't satisfy any descriptor");
@@ -169,6 +209,8 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 		let selectedVCs = [];
 		let originalVCs = [];
+		const descriptorMap = [];
+		let i = 0;
 		for (const [descriptor_id, credentialIdentifier] of selectionMap) {
 			const vcEntity = filteredVCEntities.filter((vc) => vc.credentialIdentifier == credentialIdentifier)[0];
 			if (vcEntity.format == VerifiableCredentialFormat.SD_JWT_VC) {
@@ -181,66 +223,54 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 					vcEntity.credential
 				).withHasher(hasherAndAlgorithm)
 				const presentation = await sdJwt.present(presentationFrame);
-				selectedVCs.push(presentation);
+				const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, [ presentation ]);
+				selectedVCs.push(vpjwt);
+				descriptorMap.push({
+					id: descriptor_id,
+					format: VerifiableCredentialFormat.SD_JWT_VC,
+					path: `$[${i}]`
+				});
+				i++;
 				originalVCs.push(vcEntity);
 			}
 			else if (vcEntity.format == VerifiableCredentialFormat.MSO_MDOC) {
-				const presentationSubmission = {
-					"definition_id": presentationDefinition.id,
-					"id": vcEntity.doctype,
-					"descriptor_map": [
-						{
-							"id": vcEntity.doctype,
-							"format": "mso_mdoc",
-							"path": "$"
-						}
-					]
-				};
 				const parsed = await parseMsoMdocCredential(vcEntity.credential, vcEntity.doctype);
 				const { deviceResponseMDoc } = await this.generateDeviceResponseFn(parsed, presentationDefinition, generateRandomIdentifier(8), nonce, client_id, response_uri);
 				const encodedDeviceResponse = base64url.encode(deviceResponseMDoc.encode());
-				const formData = new URLSearchParams();
-				formData.append('vp_token', encodedDeviceResponse);
-				formData.append('presentation_submission', JSON.stringify(presentationSubmission));
-				formData.append('state', state);
 
-				const res = await axios.post(response_uri, formData.toString(), {
-					maxRedirects: 0,
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-					}
+				selectedVCs.push(encodedDeviceResponse);
+				descriptorMap.push({
+					id: descriptor_id,
+					format: VerifiableCredentialFormat.MSO_MDOC,
+					path: `$[${i}]`
 				});
-				await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [vcEntity.credentialIdentifier], presentationSubmission, new URL(S.response_uri).hostname);
+				i++;
+				// await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [vcEntity.credentialIdentifier], presentationSubmission, client_id);
 
-				if (res.data.redirect_uri) {
-					return { url: res.data.redirect_uri };
-				}
 			}
 		}
 
-		const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, selectedVCs);
-		const { presentationSubmission } = await Verify.getMatchesForPresentationDefinition(vpjwt, presentationDefinition);
 
+		console.log("Selected vcs = ", selectedVCs)
+		console.log("Descriptor map = ", descriptorMap)
+		const presentationSubmission = {
+			id: "123123",
+			definition_id: S.presentation_definition.id,
+			descriptor_map: descriptorMap,
+		};
 
+		console.log("Selected VCs = ", selectedVCs)
 		const formData = new URLSearchParams();
-		formData.append('vp_token', vpjwt);
+		formData.append('vp_token', selectedVCs[0]);
 		formData.append('presentation_submission', JSON.stringify(presentationSubmission));
 		formData.append('state', S.state);
 
-		const res = await axios.post(response_uri, formData.toString(), {
-			maxRedirects: 0,
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			}
+		const res = await this.httpProxy.post(response_uri, formData.toString(), {
+			'Content-Type': 'application/x-www-form-urlencoded',
 		});
-		const credentialHashes = await Promise.all(originalVCs.map((vc) =>
-			crypto.subtle.digest('SHA-256', new TextEncoder().encode(vc.credential)).then((v) => btoa(
-				new Uint8Array(v)
-					.reduce((data, byte) => data + String.fromCharCode(byte), '')
-			))
-		));
+
+		console.log("Direct post response = ", res);
 		const credentialIdentifiers = originalVCs.map((vc) => vc.credentialIdentifier);
-		await this.storeVerifiablePresentation(vpjwt, "jwt_vp", credentialIdentifiers, presentationSubmission, new URL(S.response_uri).hostname);
 
 		if (res.data.redirect_uri) {
 			return { url: res.data.redirect_uri };

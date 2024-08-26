@@ -5,12 +5,16 @@ export type InputDescriporFormatType = {
 };
 
 export type InputDescriptorConstraintFieldType = {
+	purpose: string;
+	name: string;
+	intent_to_retain?: boolean;
 	path: string[];
 	filter?: any; // JSON schema as an object.
 }
 
 export type InputDescriptorType = {
 	id: string;
+	format?: string;
 	constraints: {
 		fields: InputDescriptorConstraintFieldType[];
 	}

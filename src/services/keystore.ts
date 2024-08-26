@@ -1082,22 +1082,24 @@ export async function signJwtPresentation([privateData, mainKey]: [PrivateData, 
 	const { alg, did, wrappedPrivateKey } = keypair;
 	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, mainKey);
 
-	const jws = await new SignVerifiablePresentationJWT()
-		.setProtectedHeader({ alg, typ: "JWT", kid })
-		.setVerifiableCredential(verifiableCredentials)
-		.setContext(["https://www.w3.org/2018/credentials/v1"])
-		.setType(["VerifiablePresentation"])
+	const jws = await new SignJWT({
+			vp: {
+				'@context': ["https://www.w3.org/2018/credentials/v1"],
+				type: ["VerifiablePresentation"],
+				verifiableCredential: verifiableCredentials,
+				credentialSchema: {
+					id: config.verifiablePresentationSchemaURL,
+					type: "FullJsonSchemaValidator2021",
+				},
+			},
+			nonce,
+		})
+		.setIssuer(kid)
+		.setSubject(kid)
 		.setAudience(audience)
-		.setCredentialSchema(
-			config.verifiablePresentationSchemaURL,
-			"FullJsonSchemaValidator2021")
-		.setIssuer(did)
-		.setSubject(did)
-		.setHolder(did)
 		.setJti(`urn:id:${uuidv4()}`)
-		.setNonce(nonce)
 		.setIssuedAt()
-		.setExpirationTime('1m')
+		.setProtectedHeader({ alg, typ: "JWT", jwk: { ...keypair.publicKey, key_ops: [ 'verify' ] } as JWK })
 		.sign(privateKey);
 	return { vpjwt: jws };
 }
@@ -1111,8 +1113,8 @@ export async function generateOpenid4vciProof(
 ): Promise<[{ proof_jwt: string }, OpenedContainer]> {
 	const deriveKid = async (publicKey: CryptoKey, did: string) => {
 		const pubKey = await crypto.subtle.exportKey("jwk", publicKey);
-		const jwkThumbrint = await jose.calculateJwkThumbprint(pubKey as JWK, "sha256");
-		return jwkThumbrint;
+		const jwkThumbprint = await jose.calculateJwkThumbprint(pubKey as JWK, "sha256");
+		return jwkThumbprint;
 	};
 	const { privateKey, keypair, newPrivateData } = await addNewCredentialKeypair(container, didKeyVersion, deriveKid);
 	const { kid, did } = keypair;
@@ -1125,7 +1127,7 @@ export async function generateOpenid4vciProof(
 		.setProtectedHeader({
 			alg: keypair.alg,
 			typ: "openid4vci-proof+jwt",
-			jwk: keypair.publicKey,
+			jwk: { ...keypair.publicKey, key_ops: [ 'verify' ] } as  JWK,
 		})
 		.setIssuedAt()
 		.sign(privateKey);
@@ -1141,7 +1143,7 @@ export async function generateDeviceResponse([privateData, mainKey]: [PrivateDat
 	const devicePublicKeyJwk = COSEKeyToJWK(deviceKey);
 	const kid = await jose.calculateJwkThumbprint(devicePublicKeyJwk, "sha256");
 
-	// get the keypair based on the jwk thumbrint
+	// get the keypair based on the jwk Thumbprint
 	const keypair = privateData.keypairs[kid];
 	if (!keypair) {
 		throw new Error("Key pair not found for kid (key ID): " + kid);
