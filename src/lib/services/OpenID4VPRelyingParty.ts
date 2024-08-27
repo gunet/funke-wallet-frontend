@@ -26,7 +26,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 	) { }
 
 
-	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION_URI" | "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED" }> {
+	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION" | "MISSING_PRESENTATION_DEFINITION_URI" | "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED" }> {
 		const authorizationRequest = new URL(url);
 		let client_id = authorizationRequest.searchParams.get('client_id');
 		let client_id_scheme = authorizationRequest.searchParams.get('client_id_scheme');
@@ -70,9 +70,11 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 		const vcList = await this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials);
 
+		if (!presentation_definition) {
+			return { err: "MISSING_PRESENTATION_DEFINITION" };
+		}
 		if (presentation_definition.input_descriptors.length > 1) {
 			return { err: "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED" };
-
 		}
 
 		await this.openID4VPRelyingPartyStateRepository.store(new OpenID4VPRelyingPartyState(

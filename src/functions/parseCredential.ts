@@ -53,8 +53,8 @@ export const parseCredential = async (credential: StorableCredential, validate: 
 	}
 
 	if (credential.format == VerifiableCredentialFormat.MSO_MDOC) {
-		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype).catch(() => {
-			return parseMsoMdocDeviceResponse(credential.credential); // parse design response
+		const parsed = await parseMsoMdocCredential(credential.credential, credential.doctype).catch((err) => {
+			return parseMsoMdocDeviceResponse(credential.credential); // parse device response
 		});
 		if (validate) {
 			const result = await verifyMdocWithAllCerts(parsed);
