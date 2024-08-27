@@ -1081,26 +1081,20 @@ export async function signJwtPresentation([privateData, mainKey]: [PrivateData, 
 	}
 	const { alg, did, wrappedPrivateKey } = keypair;
 	const privateKey = await unwrapPrivateKey(wrappedPrivateKey, mainKey);
-
-	const jws = await new SignJWT({
-			vp: {
-				'@context': ["https://www.w3.org/2018/credentials/v1"],
-				type: ["VerifiablePresentation"],
-				verifiableCredential: verifiableCredentials,
-				credentialSchema: {
-					id: config.verifiablePresentationSchemaURL,
-					type: "FullJsonSchemaValidator2021",
-				},
-			},
+	const sdJwt = verifiableCredentials[0];
+	const sd_hash = toBase64Url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sdJwt)));
+	const kbJWT = await new SignJWT({
 			nonce,
+			aud: audience,
+			sd_hash,
 		})
-		.setIssuer(kid)
-		.setSubject(kid)
-		.setAudience(audience)
-		.setJti(`urn:id:${uuidv4()}`)
 		.setIssuedAt()
-		.setProtectedHeader({ alg, typ: "JWT", jwk: { ...keypair.publicKey, key_ops: [ 'verify' ] } as JWK })
-		.sign(privateKey);
+		.setProtectedHeader({
+			typ: "kb+jwt",
+			alg: alg
+		}).sign(privateKey);
+	
+	const jws = sdJwt + kbJWT;
 	return { vpjwt: jws };
 }
 

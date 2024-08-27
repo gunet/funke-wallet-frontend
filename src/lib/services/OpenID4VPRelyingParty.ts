@@ -1,6 +1,5 @@
 import { MDoc } from "@auth0/mdl";
 import { IOpenID4VPRelyingParty } from "../interfaces/IOpenID4VPRelyingParty";
-import axios from "axios";
 import { StorableCredential } from "../types/StorableCredential";
 import { Verify } from "../utils/Verify";
 import { HasherAlgorithm, HasherAndAlgorithm, SdJwt } from "@sd-jwt/core";
@@ -8,7 +7,7 @@ import { VerifiableCredentialFormat } from "../schemas/vc";
 import { parseMsoMdocCredential } from "../mdl/mdl";
 import { JSONPath } from "jsonpath-plus";
 import { generateRandomIdentifier } from "../utils/generateRandomIdentifier";
-import { base64url, jwtDecrypt, jwtVerify } from "jose";
+import { base64url } from "jose";
 import { OpenID4VPRelyingPartyState } from "../types/OpenID4VPRelyingPartyState";
 import { OpenID4VPRelyingPartyStateRepository } from "./OpenID4VPRelyingPartyStateRepository";
 import { IHttpProxy } from "../interfaces/IHttpProxy";
@@ -66,6 +65,9 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			nonce = p.nonce;
 			client_metadata = p.client_metadata;
 			console.log("DEF = ", presentation_definition)
+			if (!response_uri.startsWith("http")) {
+				response_uri = `https://${response_uri}`;
+			}
 		}
 
 		const vcList = await this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials);
@@ -136,12 +138,17 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				return { err: "INSUFFICIENT_CREDENTIALS" };
 			}
 			const requestedFieldNames = descriptor.constraints.fields
-				.map((field) => field.name)
+				.map((field) => {
+					if (field.name) {
+						return field.name;
+					}
+					return field.path[0];
+				})
 			mapping.set(descriptor.id, { credentials: [...conformingVcList], requestedFields: requestedFieldNames });
 		}
 
 		console.log("Response uri = ", response_uri)
-		const verifierDomainName = client_id;
+		const verifierDomainName = client_id.includes("http") ? new URL(client_id).hostname : client_id;
 		if (mapping.size == 0) {
 			console.log("Credentials don't satisfy any descriptor")
 			throw new Error("Credentials don't satisfy any descriptor");
@@ -174,21 +181,49 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		* @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
 		*/
 		const generatePresentationFrameForPaths = (paths) => {
-			const result = {};
+			let result = {};
 
-			paths.forEach((path) => {
-				const keys = path.split(".").slice(1); // Splitting and removing the initial '$'
-				let nestedObj = result;
+			paths.forEach((path: string) => {
+				if (path.includes("[")) {
+					// Use the matchAll method to get all matches
+					let matches = [...path.matchAll(/\['(.*?)'\]/g)];
 
-				keys.forEach((key, index) => {
-					if (index === keys.length - 1) {
-						nestedObj[key] = true; // Setting the innermost key to true
+					// Initialize an empty object to build the result
+					let current = result;
+
+					// Iterate over each match and build the nested object
+					for (let i = 0; i < matches.length; i++) {
+						let key = matches[i][1];
+
+						// If this is the last key, set its value to true
+						if (i === matches.length - 1) {
+							current[key] = true;
+						} else {
+							// Otherwise, create a new nested object if it doesn't exist
+							current[key] = current[key] || {};
+							current = current[key];
+						}
 					}
-					else {
-						nestedObj[key] = nestedObj[key] || {}; // Creating nested object if not exists
-						nestedObj = nestedObj[key]; // Moving to the next nested object
+				}
+				else {
+					let keys = path.replace(/^\$\./, '').split('.');
+					// Initialize an empty object to build the result
+					let current = result;
+
+					// Iterate over each key and build the nested object
+					for (let i = 0; i < keys.length; i++) {
+						let key = keys[i];
+
+						// If this is the last key, set its value to true
+						if (i === keys.length - 1) {
+							current[key] = true;
+						} else {
+							// Otherwise, create a new nested object if it doesn't exist
+							current[key] = current[key] || {};
+							current = current[key];
+						}
 					}
-				});
+				}
 			});
 			return result;
 		};
@@ -208,6 +243,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			);
 
 		let selectedVCs = [];
+		let generatedVPs = [];
 		let originalVCs = [];
 		const descriptorMap = [];
 		let i = 0;
@@ -221,14 +257,15 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				let presentationFrame = generatePresentationFrameForPaths(allPaths);
 				const sdJwt = SdJwt.fromCompact<Record<string, unknown>, any>(
 					vcEntity.credential
-				).withHasher(hasherAndAlgorithm)
+				).withHasher(hasherAndAlgorithm);
 				const presentation = await sdJwt.present(presentationFrame);
-				const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, response_uri, [ presentation ]);
-				selectedVCs.push(vpjwt);
+				const { vpjwt } = await this.signJwtPresentationKeystoreFn(nonce, client_id, [presentation]);
+				selectedVCs.push(presentation);
+				generatedVPs.push(vpjwt);
 				descriptorMap.push({
 					id: descriptor_id,
 					format: VerifiableCredentialFormat.SD_JWT_VC,
-					path: `$[${i}]`
+					path: `$`
 				});
 				i++;
 				originalVCs.push(vcEntity);
@@ -239,38 +276,38 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				const encodedDeviceResponse = base64url.encode(deviceResponseMDoc.encode());
 
 				selectedVCs.push(encodedDeviceResponse);
+				generatedVPs.push(encodedDeviceResponse);
 				descriptorMap.push({
 					id: descriptor_id,
 					format: VerifiableCredentialFormat.MSO_MDOC,
-					path: `$[${i}]`
+					path: `$`
 				});
 				i++;
-				// await this.storeVerifiablePresentation(encodedDeviceResponse, "mso_mdoc", [vcEntity.credentialIdentifier], presentationSubmission, client_id);
+				originalVCs.push(vcEntity);
 
 			}
 		}
 
-
-		console.log("Selected vcs = ", selectedVCs)
-		console.log("Descriptor map = ", descriptorMap)
 		const presentationSubmission = {
 			id: "123123",
 			definition_id: S.presentation_definition.id,
 			descriptor_map: descriptorMap,
 		};
 
-		console.log("Selected VCs = ", selectedVCs)
 		const formData = new URLSearchParams();
-		formData.append('vp_token', selectedVCs[0]);
+		formData.append('vp_token', generatedVPs[0]);
 		formData.append('presentation_submission', JSON.stringify(presentationSubmission));
 		formData.append('state', S.state);
+
+		const credentialIdentifiers = originalVCs.map((vc) => vc.credentialIdentifier);
+
+		await this.storeVerifiablePresentation(generatedVPs[0], presentationSubmission.descriptor_map[0].format, credentialIdentifiers, presentationSubmission, client_id);
 
 		const res = await this.httpProxy.post(response_uri, formData.toString(), {
 			'Content-Type': 'application/x-www-form-urlencoded',
 		});
 
 		console.log("Direct post response = ", res);
-		const credentialIdentifiers = originalVCs.map((vc) => vc.credentialIdentifier);
 
 		if (res.data.redirect_uri) {
 			return { url: res.data.redirect_uri };

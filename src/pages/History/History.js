@@ -17,6 +17,7 @@ import CredentialsContext from '../../context/CredentialsContext';
 import { generateRandomIdentifier } from '../../lib/utils/generateRandomIdentifier';
 import { JSONPath } from 'jsonpath-plus';
 import { base64url } from 'jose';
+import { VerifiableCredentialFormat } from '../../lib/schemas/vc';
 
 const History = () => {
 	const { isOnline } = useContext(OnlineStatusContext);
@@ -53,26 +54,13 @@ const History = () => {
 	}, [getData]);
 
 	const handleHistoryItemClick = async (item) => {
-
-
 		let vcEntities = [];
-		if (item.format == "jwt_vp") {
-			const vpTokenPayload = JSON.parse(new TextDecoder().decode(
-				base64url.decode(item.presentation.split('.')[1])
-			));
-			vcEntities = item.presentationSubmission.descriptor_map.map(({id, path, format}) => {
-				const findCredentialByPath = JSONPath(path, vpTokenPayload.vp)[0];
-				if (!findCredentialByPath) {
-					throw new Error("Couldn't find credential by path on presentationSubmission.descriptor_map");
-				}
-				return {
-					format: format,
-					credential: findCredentialByPath,
-				}
-			})
+		if (item.format == VerifiableCredentialFormat.SD_JWT_VC) {
+			// remove the kb-jwt part
+			vcEntities = [{ format: VerifiableCredentialFormat.SD_JWT_VC, credential: item.presentation.split('~').slice(0, -1).join('~') + '~' }];
 		}
-		else if (item.format == "mso_mdoc") {
-			vcEntities = [ { format: "mso_mdoc", credential: item.presentation } ]
+		else if (item.format == VerifiableCredentialFormat.MSO_MDOC) {
+			vcEntities = [{ format: VerifiableCredentialFormat.MSO_MDOC, credential: item.presentation }];
 		}
 		// Set matching credentials and show the popup
 		setMatchingCredentials(vcEntities);
@@ -156,14 +144,14 @@ const History = () => {
 						<Slider ref={sliderRef} {...settings}>
 							{matchingCredentials.map((vcEntity, index) => (
 								<>
-									<React.Fragment key={vcEntity ? vcEntity?.id : "unavailable-" + generateRandomIdentifier(6) }>
+									<React.Fragment key={vcEntity ? vcEntity?.id : "unavailable-" + generateRandomIdentifier(6)}>
 										{(currentSlide === index + 1 ? 'button' : 'div')
 											.split()
 											.map(Tag => (
 												<>
 													<div
 														className="relative rounded-xl xl:w-full md:w-full sm:w-full overflow-hidden transition-shadow shadow-md hover:shadow-lg w-full mb-2"
-														aria-label={`${vcEntity ? vcEntity?.friendlyName : "Credential is deleted" }`}
+														aria-label={`${vcEntity ? vcEntity?.friendlyName : "Credential is deleted"}`}
 													>
 														<CredentialImage credential={vcEntity} className={"w-full h-full object-cover rounded-xl"} />
 													</div>
