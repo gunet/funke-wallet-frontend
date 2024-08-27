@@ -48,6 +48,7 @@ export function useCommunicationProtocols() {
 
 		container.register<IOpenID4VPRelyingParty>('OpenID4VPRelyingParty', OpenID4VPRelyingParty,
 			container.resolve<IOpenID4VPRelyingPartyStateRepository>('OpenID4VPRelyingPartyStateRepository'),
+			container.resolve<IHttpProxy>('HttpProxy'),
 			async function getAllStoredVerifiableCredentials() {
 				const fetchAllCredentials = await api.get('/storage/vc');
 				return { verifiableCredentials: fetchAllCredentials.data.vc_list };

@@ -83,14 +83,13 @@ export class Verify {
 		return { conformingCredentials, descriptorMapElements };
 	}
 
-	public static verifyVcJwtWithDescriptor(descriptor: InputDescriptorType, vcjwt: string): boolean {
+	public static verifyVcJwtWithDescriptor(descriptor: InputDescriptorType, payload: any): boolean {
 
 		const fieldsList: InputDescriptorConstraintFieldType[] = JSONPath({
 			path: `$.constraints.fields[*]`,
 			json: descriptor,
 		}) as InputDescriptorConstraintFieldType[];
 
-		const payload: any = JSON.parse(new TextDecoder().decode(base64url.decode(vcjwt.split(".")[1])))
 
 		const vcJSON = payload;
 		for (const field of fieldsList) {
@@ -98,8 +97,10 @@ export class Verify {
 			const filter = field.filter; // is a json schema
 			for (const p of paths) {
 				const fieldVer = this.verifyField(vcJSON, filter, p)
-				if (!fieldVer)
+				if (!fieldVer) {
+					console.log(`Field verification failed for the field ${field?.name}`)
 					return false;
+				}
 			}
 		}
 		return true;

@@ -29,9 +29,9 @@
     jsonpointer "^5.0.0"
     leven "^3.1.0"
 
-"@auth0/mdl@./auth0-mdl-v0.3.0-wwwallet-build-1722929256.tgz":
-  version "0.3.0-wwwallet-build-1722929256"
-  resolved "./auth0-mdl-v0.3.0-wwwallet-build-1722929256.tgz#8cb9e4accc1d68bbcfa1195fd98e34d70ac94e06"
+"@auth0/mdl@./auth0-mdl-v0.3.0-wwwallet-build-1724387059.tgz":
+  version "0.3.0-wwwallet-build-1724387059"
+  resolved "./auth0-mdl-v0.3.0-wwwallet-build-1724387059.tgz#4925f17e27cb2afe0373a00a8700692aadc042ef"
   dependencies:
     "@noble/curves" "^1.2.0"
     "@panva/hkdf" "^1.1.1"
@@ -2292,9 +2292,9 @@
     eslint-scope "5.1.1"
 
 "@noble/curves@^1.2.0":
-  version "1.4.2"
-  resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.4.2.tgz#40309198c76ed71bc6dbf7ba24e81ceb4d0d1fe9"
-  integrity sha512-TavHr8qycMChk8UwMld0ZDRvatedkzWfH8IiaeGCfymOP5i0hSCozz9vHOL0nkwk7HRMlFnAiKpS2jrUmSybcw==
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.5.0.tgz#7a9b9b507065d516e6dce275a1e31db8d2a100dd"
+  integrity sha512-J5EKamIHnKPyClwVrzmaf5wSdQXgdHcPZIZLu3bwnbeCx8/7NPK5q2ZBWF+5FvYGByjiQQsJYX6jfgB2wDPn3A==
   dependencies:
     "@noble/hashes" "1.4.0"
 
@@ -2464,9 +2464,9 @@
     webcrypto-core "^1.8.0"
 
 "@peculiar/x509@^1.9.5":
-  version "1.11.0"
-  resolved "https://registry.yarnpkg.com/@peculiar/x509/-/x509-1.11.0.tgz#a60d2576c6496ef9839c0de148e4c75c905a127d"
-  integrity sha512-8rdxE//tsWLb2Yo2TYO2P8gieStbrHK/huFMV5PPfwX8I5HmtOus+Ox6nTKrPA9o+WOPaa5xKenee+QdmHBd5g==
+  version "1.12.1"
+  resolved "https://registry.yarnpkg.com/@peculiar/x509/-/x509-1.12.1.tgz#f879a918862f1c058524dca1ddbf259fc6aa6694"
+  integrity sha512-2T9t2viNP9m20mky50igPTpn2ByhHl5NlT6wW4Tp4BejQaQ5XDNZgfsabYwYysLXhChABlgtTCpp2gM3JBZRKA==
   dependencies:
     "@peculiar/asn1-cms" "^2.3.8"
     "@peculiar/asn1-csr" "^2.3.8"
