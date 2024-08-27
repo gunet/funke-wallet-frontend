@@ -1084,16 +1084,16 @@ export async function signJwtPresentation([privateData, mainKey]: [PrivateData, 
 	const sdJwt = verifiableCredentials[0];
 	const sd_hash = toBase64Url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sdJwt)));
 	const kbJWT = await new SignJWT({
-			nonce,
-			aud: audience,
-			sd_hash,
-		})
-		.setIssuedAt()
+		nonce,
+		aud: audience,
+		sd_hash,
+	}).setIssuedAt()
 		.setProtectedHeader({
 			typ: "kb+jwt",
 			alg: alg
-		}).sign(privateKey);
-	
+		})
+		.sign(privateKey);
+
 	const jws = sdJwt + kbJWT;
 	return { vpjwt: jws };
 }
@@ -1121,7 +1121,7 @@ export async function generateOpenid4vciProof(
 		.setProtectedHeader({
 			alg: keypair.alg,
 			typ: "openid4vci-proof+jwt",
-			jwk: { ...keypair.publicKey, key_ops: [ 'verify' ] } as  JWK,
+			jwk: { ...keypair.publicKey, key_ops: ['verify'] } as JWK,
 		})
 		.setIssuedAt()
 		.sign(privateKey);
