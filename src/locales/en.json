@@ -20,7 +20,7 @@
 		"save": "Save",
 		"submit": "Submit",
 		"tryAgain": "Try again",
-		"walletName": "wwWallet"
+		"walletName": "Funke Wallet"
 	},
 	"browserSupportWarningPortal": {
 		"continueAnyway": "Continue anyway",
@@ -45,7 +45,7 @@
 		"confirm": "Confirm",
 		"message": "Use your <strong>passkey</strong> to continue and fetch your credential in your wallet.",
 		"title": "Hi,",
-		"welcomeBackMessage": "Welcome back to <highlight>wwWallet</highlight>"
+		"welcomeBackMessage": "Welcome back to <highlight>Funke Wallet</highlight>"
 	},
 	"loginSignup": {
 		"alreadyHaveAccountQuestion": "Already have an account? ",
@@ -62,7 +62,7 @@
 		"incorrectCredentialsError": "Incorrect username or password",
 		"infoAboutTimeAndLocation": "Make sure that your date/time settings and timezone are correctly set and accurate.",
 		"learnMoreAboutPrfCompatibility": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support.</docLinkPrf>",
-		"learnMoreAboutPrfCompatibilityLaunchpadAndScenarios": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support</docLinkPrf> and discover wwWallet via our <docLinkLaunchpad>Launchpad</docLinkLaunchpad> and <docLinkScenarios>Sample Scenarios</docLinkScenarios> ",
+		"learnMoreAboutPrfCompatibilityLaunchpadAndScenarios": "Learn about <docLinkPrf>PRF Compatibility regarding browser/OS support</docLinkPrf> and discover Funke Wallet via our <docLinkLaunchpad>Launchpad</docLinkLaunchpad> and <docLinkScenarios>Sample Scenarios</docLinkScenarios> ",
 		"learnMoreAboutPrfCompatibilityAriaLabel": "Learn more about PRF Compatibility regarding browser/OS support",
 		"learnMoreAboutLaunchpadAriaLabel": "Discover our Launchpad",
 		"learnMoreAboutScenariosAriaLabel": "Learn more about sample scenarios",
@@ -106,13 +106,17 @@
 		"usernameLabel": "Username",
 		"useOtherAccount": "Use other Account",
 		"weakPasswordError": "Weak password",
-		"welcomeMessage": "Welcome to <highlight>wwWallet</highlight>"
+		"welcomeMessage": "Welcome to <highlight>Funke Wallet</highlight>"
 	},
 	"messagePopup": {
 		"close": "Close",
 		"insufficientCredentials": {
 			"title": "Insufficient Credentials",
 			"description": "One or more of the credentials you want to present do not exist for selection."
+		},
+		"onlyOneInputDescriptor": {
+			"title": "Invalid number of input descriptors",
+			"description": "Only one input descriptor is currently supported."
 		},
 		"sendResponseError": {
 			"title": "Send Response Error",
@@ -131,8 +135,10 @@
 	"pageAddCredentials": {
 		"description": "Search and choose an issuer for credential retrieval",
 		"noFound": "No matching issuers found.",
+		"pidSdJwt": "SD JWT PID",
+		"pidMsoMdoc": "mDoc PID",
 		"popup": {
-			"message": "You have selected {{issuerName}}. If you continue, you will be redirected in the current tab to the issuer's page.",
+			"message": "This credential issuer can provide credentials of the following types. By selecting one type and clicking on 'Continue', you will be redirected to the issuer.",
 			"title": "Selected Issuer:"
 		},
 		"searchPlaceholder": "Search issuers..."
@@ -162,7 +168,7 @@
 		"description": "Search and choose a verifier to share credentials with",
 		"noFound": "No matching verifiers found.",
 		"popup": {
-			"message": "You have selected {{verifierName}}. If you continue, you will be redirected in the current tab to the issuer's page.",
+			"message": "If you continue, you will be redirected in the current tab to the issuer's page.",
 			"title": "Selected Verifier:"
 		},
 		"searchPlaceholder": "Search verifiers..."
@@ -277,9 +283,9 @@
 		"closeTourButton": "Close Tour"
 	},
 	"welcomeModal": {
-		"title": "Welcome to wwWallet!",
+		"title": "Welcome to Funke Wallet!",
 		"description": "Discover the <strong> {{walletName}} </strong>, your ultimate tool for managing digital credentials. Effortlessly view, get, present and keep track of all your credentials!",
-		"question": "Are you ready to explore the features of wwWallet through a guided tour?",
+		"question": "Are you ready to explore the features of Funke Wallet through a guided tour?",
 		"dismissButton": "Dismiss",
 		"startTourButton": "Start Tour"
 	}

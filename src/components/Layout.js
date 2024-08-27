@@ -12,10 +12,13 @@ import { useApi } from '../api';
 import BottomNav from './BottomNav';
 import OnlineStatusContext from '../context/OnlineStatusContext';
 import { notificationApiIsSupported } from '../firebase';
+import { BackgroundTasksContext } from '../context/BackgroundTasksContext';
+import Spinner from './Spinner';
 import { PiWifiHighBold, PiWifiSlashBold } from "react-icons/pi";
 
 const Layout = ({ children, isPermissionGranted, tokenSentInSession }) => {
 	const { isOnline } = useContext(OnlineStatusContext);
+	const { isLoading, addLoader, removeLoader } = useContext(BackgroundTasksContext);
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [isContentVisible, setIsContentVisible] = useState(false);
@@ -70,13 +73,17 @@ const Layout = ({ children, isPermissionGranted, tokenSentInSession }) => {
 					<PiWifiSlashBold size={25} title={t('common.offline')} />
 				)}
 				<div className="flex items-center">
-					<button className='mr-2' onClick={() => handleNavigate('/')}>
-						<img
-							src={logo}
-							alt="Logo"
-							className="w-10 h-auto cursor-pointer"
-						/>
-					</button>
+					{isLoading() ? (
+						<Spinner size='small' />
+					) : (
+						<button className='mr-2' onClick={() => handleNavigate('/')}>
+							<img
+								src={logo}
+								alt="Logo"
+								className="w-10 h-auto cursor-pointer"
+							/>
+						</button>
+					)}
 					<a href={('/')}
 						className="text-white text-xl font-bold cursor-pointer"
 					>

@@ -1,12 +1,13 @@
 // Import Libraries
-import React, { useEffect, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect, Suspense, useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Spinner from './components/Spinner'; // Make sure this Spinner component exists and renders the spinner you want
 // Import i18next and set up translations
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 
 import { CredentialsProvider } from './context/CredentialsContext';
+import { CommunicationProtocolsProvider } from './context/CommunicationProtocolsContext';
 import useCheckURL from './components/useCheckURL'; // Import the custom hook
 import handleServerMessagesGuard from './hoc/handleServerMessagesGuard';
 import HandlerNotification from './components/HandlerNotification';
@@ -18,6 +19,7 @@ import History from './pages/History/History';
 import Settings from './pages/Settings/Settings';
 import AddCredentials from './pages/AddCredentials/AddCredentials';
 import SendCredentials from './pages/SendCredentials/SendCredentials';
+
 
 const Login = React.lazy(() => import('./pages/Login/Login'));
 const LoginState = React.lazy(() => import('./pages/Login/LoginState'));
@@ -31,7 +33,8 @@ const VerificationResult = React.lazy(() => import('./pages/VerificationResult/V
 
 function App() {
 
-	const url = window.location.href;
+	const location = useLocation();
+	const [url, setUrl] = useState(window.location.href);
 	const {
 		showSelectCredentialsPopup,
 		setShowSelectCredentialsPopup,
@@ -45,6 +48,10 @@ function App() {
 		textMessagePopup,
 		typeMessagePopup,
 	} = useCheckURL(url);
+
+	useEffect(() => {
+		setUrl(window.location.href);
+	}, [location])
 
 	useEffect(() => {
 		if (navigator?.serviceWorker) {
@@ -69,8 +76,8 @@ function App() {
 	return (
 		<I18nextProvider i18n={i18n}>
 			<CredentialsProvider>
-				<Snowfalling />
-				<Router>
+				<CommunicationProtocolsProvider>
+					<Snowfalling />
 					<Suspense fallback={<Spinner />}>
 						<HandlerNotification />
 						<Routes>
@@ -93,10 +100,13 @@ function App() {
 							<PinInputPopup showPopup={showPinInputPopup} setShowPopup={setShowPinInputPopup} />
 						}
 						{showMessagePopup &&
-							<MessagePopup type={typeMessagePopup} message={textMessagePopup} onClose={() => setMessagePopup(false)} />
+							<MessagePopup type={typeMessagePopup} message={textMessagePopup} onClose={() => {
+								setMessagePopup(false)
+								window.location.href = '/'
+							}} />
 						}
 					</Suspense>
-				</Router>
+				</CommunicationProtocolsProvider>
 			</CredentialsProvider>
 		</I18nextProvider>
 	);

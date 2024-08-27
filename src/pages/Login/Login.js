@@ -617,7 +617,7 @@ const Login = () => {
 								{/* <div className="absolute top-2 right-2">
 							<LanguageSelector />
 						</div> */}
-								<CheckBrowserSupport.Ctx>
+								{/* <CheckBrowserSupport.Ctx>
 									<CheckBrowserSupport.If test={(ctx) => !ctx.showWarningPortal}>
 										<div className="text-sm font-light text-gray-500 dark:text-gray-200 italic mb-2">
 											<CheckBrowserSupport.If test={(ctx) => ctx.browserSupported}>
@@ -665,7 +665,7 @@ const Login = () => {
 											</CheckBrowserSupport.If>
 										</div>
 									</CheckBrowserSupport.If>
-								</CheckBrowserSupport.Ctx>
+								</CheckBrowserSupport.Ctx> */}
 								<div className="relative p-6 space-y-4 md:space-y-6 sm:p-8 bg-white rounded-lg shadow dark:bg-gray-800">
 									<CheckBrowserSupport.WarningPortal>
 										<h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl text-center dark:text-white">

@@ -3,11 +3,13 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import ConsoleBehavior from './ConsoleBehavior';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
+import { BackgroundTasksProvider } from './context/BackgroundTasksContext';
 import { initializeDataSource } from './indexedDB';
 import * as offlineSW from './offlineRegistrationSW';
 import * as firebaseSW from './firebase';
 import Modal from 'react-modal';
 import './index.css';
+import { BrowserRouter } from "react-router-dom";
 
 ConsoleBehavior();
 
@@ -26,13 +28,15 @@ const RootComponent = () => {
 		initDB();
 	}, []);
 
-	return <App />;
+	return <BrowserRouter><App /></BrowserRouter>;
 };
 
 const root = createRoot(document.getElementById('root'));
 root.render(
 	<OnlineStatusProvider>
-		<RootComponent />
+		<BackgroundTasksProvider>
+			<RootComponent />
+		</BackgroundTasksProvider>
 	</OnlineStatusProvider>
 );
 

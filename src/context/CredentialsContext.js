@@ -19,7 +19,7 @@ export const CredentialsProvider = ({ children }) => {
 		const fetchedVcList = response.data.vc_list;
 
 		const vcEntityList = await Promise.all(fetchedVcList.map(async vcEntity => {
-			const name = await extractCredentialFriendlyName(vcEntity.credential);
+			const name = "";
 			return { ...vcEntity, friendlyName: name };
 		}));
 
