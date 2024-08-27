@@ -113,6 +113,10 @@
 			"title": "Insufficient Credentials",
 			"description": "One or more of the credentials you want to present do not exist for selection."
 		},
+		"onlyOneInputDescriptor": {
+			"title": "Invalid number of input descriptors",
+			"description": "Only one input descriptor is currently supported."
+		},
 		"sendResponseError": {
 			"title": "Send Response Error",
 			"description": "An error occured during the presentation of the credentials."

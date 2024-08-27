@@ -104,6 +104,11 @@ function useCheckURL(urlToCheck: string): {
 						setTypeMessagePopup('error');
 						setMessagePopup(true);
 					}
+					else if (result.err == "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED") {
+						setTextMessagePopup({ title: `${t('messagePopup.onlyOneInputDescriptor.title')}`, description: `${t('messagePopup.onlyOneInputDescriptor.description')}` });
+						setTypeMessagePopup('error');
+						setMessagePopup(true);
+					}
 					return;
 				}
 				const { conformantCredentialsMap, verifierDomainName } = result;

@@ -26,7 +26,7 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 	) { }
 
 
-	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION_URI" }> {
+	async handleAuthorizationRequest(url: string): Promise<{ conformantCredentialsMap: Map<string, any>, verifierDomainName: string; } | { err: "INSUFFICIENT_CREDENTIALS" | "MISSING_PRESENTATION_DEFINITION_URI" | "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED" }> {
 		const authorizationRequest = new URL(url);
 		let client_id = authorizationRequest.searchParams.get('client_id');
 		let client_id_scheme = authorizationRequest.searchParams.get('client_id_scheme');
@@ -54,7 +54,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			const requestObject = requestUriResponse.data; // jwt
 			const [header, payload, sig] = requestObject.split('.');
 			const p = JSON.parse(new TextDecoder().decode(base64url.decode(payload)));
-			console.log("Payload = ", p)
 			client_id = p.client_id;
 			client_id_scheme = p.client_id_scheme;
 			response_type = p.response_type;
@@ -64,7 +63,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			state = p.state;
 			nonce = p.nonce;
 			client_metadata = p.client_metadata;
-			console.log("DEF = ", presentation_definition)
 			if (!response_uri.startsWith("http")) {
 				response_uri = `https://${response_uri}`;
 			}
@@ -72,7 +70,10 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 		const vcList = await this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials);
 
-		console.log("Presentation definition = ", presentation_definition)
+		if (presentation_definition.input_descriptors.length > 1) {
+			return { err: "ONLY_ONE_INPUT_DESCRIPTOR_IS_SUPPORTED" };
+
+		}
 
 		await this.openID4VPRelyingPartyStateRepository.store(new OpenID4VPRelyingPartyState(
 			presentation_definition,
@@ -89,18 +90,13 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
 		const mapping = new Map<string, { credentials: string[], requestedFields: string[] }>();
 		for (const descriptor of presentation_definition.input_descriptors) {
-			console.log("Descriptor :")
-			console.dir(descriptor, { depth: null })
 			const conformingVcList = []
 			for (const vc of vcList) {
-				console.log("VC = ", vc)
 				try {
 
 					if (vc.format == VerifiableCredentialFormat.SD_JWT_VC && (descriptor.format == undefined || VerifiableCredentialFormat.SD_JWT_VC in descriptor.format)) {
 						const parsed = await parseCredential({ credential: vc.credential, format: vc.format, vct: vc.vct, credentialIdentifier: "random" });
-						console.log("Parsed =  ", parsed)
 						if (Verify.verifyVcJwtWithDescriptor(descriptor, parsed)) {
-							console.log("Conforming .........")
 							conformingVcList.push(vc.credentialIdentifier);
 							continue;
 						}
@@ -146,8 +142,6 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 				})
 			mapping.set(descriptor.id, { credentials: [...conformingVcList], requestedFields: requestedFieldNames });
 		}
-
-		console.log("Response uri = ", response_uri)
 		const verifierDomainName = client_id.includes("http") ? new URL(client_id).hostname : client_id;
 		if (mapping.size == 0) {
 			console.log("Credentials don't satisfy any descriptor")
