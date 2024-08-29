@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { BiSolidCategoryAlt, BiSolidUserCircle } from 'react-icons/bi';
 import { AiFillCalendar } from 'react-icons/ai';
 import { RiPassExpiredFill, RiPassValidFill } from 'react-icons/ri';
-import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice } from 'react-icons/md';
-import { TbRating18Plus } from "react-icons/tb";
+import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice, MdHome } from 'react-icons/md';
+import { TbRating18Plus, TbRating21Plus, TbRating16Plus, TbRating12Plus, TbRating14Plus, TbSunglasses } from "react-icons/tb";
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
 import { parseCredential } from '../../functions/parseCredential';
@@ -18,8 +18,18 @@ const getFieldIcon = (fieldName) => {
 			return <RiPassValidFill size={25} className="inline mr-1" />;
 		case 'dateOfBirth':
 			return <AiFillCalendar size={25} className="inline mr-1" />;
+		case 'over12':
+			return <TbRating12Plus size={25} className="inline mr-1" />;
+		case 'over14':
+			return <TbRating14Plus size={25} className="inline mr-1" />;
+		case 'over16':
+			return <TbRating16Plus size={25} className="inline mr-1" />;
 		case 'over18':
 			return <TbRating18Plus size={25} className="inline mr-1" />;
+		case 'over21':
+			return <TbRating21Plus size={25} className="inline mr-1" />;
+		case 'over65':
+			return <TbSunglasses size={25} className="inline mr-1" />;
 		case 'id':
 			return <MdOutlineNumbers size={25} className="inline mr-1" />;
 		case 'familyName':
@@ -33,6 +43,8 @@ const getFieldIcon = (fieldName) => {
 			return <MdGrade size={25} className="inline mr-1" />;
 		case 'placeOfBirth':
 			return <MdFlag size={25} className="inline mr-1" />;
+		case 'address':
+			return <MdHome size={25} className="inline mr-1" />;
 		case 'issuingCountry':
 			return <MdLocalPolice size={25} className="inline mr-1" />;
 		default:
@@ -87,17 +99,34 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
 							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
+							{renderRow('familyName', 'Birth Family Name', parsedCredential?.birth_family_name)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.birth_place)}
+							{renderRow('address', 'Address (City)', parsedCredential?.address?.locality)}
+							{renderRow('address', 'Address (Postal Code)', parsedCredential?.address?.postal_code)}
+							{renderRow('address', 'Address (Street)', parsedCredential?.address?.street_address)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
+							{renderRow('issuingCountry', 'Issuing Company', parsedCredential?.issuing_company)}
 							{renderRow('issuingCountry', 'Issuing Authority', parsedCredential?.issuing_authority)}
 							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birth_date)}
+							{renderRow('dateOfBirth', 'Birthday (Year)', parsedCredential?.age_birth_year)}
+							{renderRow('dateOfBirth', 'Age in years', parsedCredential?.age_in_years)}
+							{renderRow('over12', 'Age Over 12', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['12'] : null)}
+							{renderRow('over14', 'Age Over 14', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['14'] : null)}
+							{renderRow('over16', 'Age Over 16', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['16'] : null)}
 							{renderRow('over18', 'Age Over 18', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['18'] : null)}
+							{renderRow('over21', 'Age Over 21', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['21'] : null)}
+							{renderRow('over65', 'Age Over 65', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['65'] : null)}
+							{renderRow('over12', 'Age Over 12', parsedCredential?.age_over_12)}
+							{renderRow('over14', 'Age Over 14', parsedCredential?.age_over_14)}
+							{renderRow('over16', 'Age Over 16', parsedCredential?.age_over_16)}
 							{renderRow('over18', 'Age Over 18', parsedCredential?.age_over_18)}
+							{renderRow('over21', 'Age Over 21', parsedCredential?.age_over_21)}
+							{renderRow('over65', 'Age Over 65', parsedCredential?.age_over_65)}
 						</>
 					)}
 				</tbody>
