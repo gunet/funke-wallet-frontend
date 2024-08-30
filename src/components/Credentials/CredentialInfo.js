@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BiSolidCategoryAlt, BiSolidUserCircle } from 'react-icons/bi';
 import { AiFillCalendar } from 'react-icons/ai';
 import { RiPassExpiredFill, RiPassValidFill } from 'react-icons/ri';
-import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice } from 'react-icons/md';
+import { MdTitle, MdGrade, MdOutlineNumbers, MdFlag, MdLocalPolice, MdHome } from 'react-icons/md';
 import { TbRating12Plus, TbRating14Plus, TbRating16Plus, TbRating18Plus, TbRating21Plus, TbCirclePlus } from "react-icons/tb";
 import { GiLevelEndFlag } from 'react-icons/gi';
 import { formatDate } from '../../functions/DateFormat';
@@ -45,6 +45,8 @@ const getFieldIcon = (fieldName) => {
 			return <MdFlag size={25} className="inline mr-1" />;
 		case 'issuingCountry':
 			return <MdLocalPolice size={25} className="inline mr-1" />;
+		case 'address':
+			return <MdHome size={25} className="inline mr-1" />;
 		default:
 			return null;
 	}
@@ -71,7 +73,7 @@ const renderRow = (fieldName, label, fieldValue) => {
 	}
 };
 
-const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:text-base pt-5 pr-2 w-full", displayAgeFields = 'false' }) => {
+const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:text-base pt-5 pr-2 w-full", displayAgeFields = 'false', displayExtraFields = 'false'}) => {
 
 	const [parsedCredential, setParsedCredential] = useState(null);
 
@@ -97,10 +99,12 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('familyName', 'Family Name', parsedCredential?.familyName)}
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
 							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
+							{renderRow('familyName', 'Birth Family Name', parsedCredential?.birth_family_name)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.birth_place)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
 							{renderRow('issuingCountry', 'Issuing Authority', parsedCredential?.issuing_authority)}
+							{renderRow('issuingCountry', 'Issuing Company', parsedCredential?.issuing_company)}
 							{renderRow('firstName', 'First Name', parsedCredential?.firstName)}
 							{renderRow('id', 'Personal ID', parsedCredential?.personalIdentifier)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
@@ -121,6 +125,15 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 									{renderRow('over21', 'Age Over 21', parsedCredential?.age_over_21)}
 									{renderRow('over', 'Age Over 65', parsedCredential?.age_over_65)}
 
+								</>
+							)}
+							{displayExtraFields === 'true' && (
+								<>
+									{renderRow('address', 'Address (City)', parsedCredential?.address?.locality)}
+									{renderRow('address', 'Address (Postal Code)', parsedCredential?.address?.postal_code)}
+									{renderRow('address', 'Address (Street)', parsedCredential?.address?.street_address)}
+									{renderRow('dateOfBirth', 'Birthday (Year)', parsedCredential?.age_birth_year)}
+									{renderRow('dateOfBirth', 'Age in years', parsedCredential?.age_in_years)}
 								</>
 							)}
 						</>
