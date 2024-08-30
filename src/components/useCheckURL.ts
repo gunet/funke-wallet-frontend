@@ -85,7 +85,7 @@ function useCheckURL(urlToCheck: string): {
 				addLoader();
 				await protocols.openID4VCIClients[credentialIssuerIdentifier].handleAuthorizationResponse(urlToCheck)
 					.then(() => {
-						window.history.replaceState({}, '', `${window.location.pathname}`);
+						// window.history.replaceState({}, '', `${window.location.pathname}`);
 						removeLoader();
 					})
 					.catch(err => {
