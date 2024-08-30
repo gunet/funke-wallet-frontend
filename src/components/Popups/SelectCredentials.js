@@ -248,7 +248,7 @@ function SelectCredentials({ showPopup, setShowPopup, setSelectionMap, conforman
 									additionalClassName='text-xs w-full'
 								/>
 								<div
-									className={`transition-all ease-in-out duration-1000 overflow-hidden shadow-md rounded-lg dark:bg-gray-700 ${credentialDisplay[vcEntity.credentialIdentifier] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
+									className={`transition-all ease-in-out duration-1000 overflow-hidden shadow-md rounded-lg dark:bg-gray-700 ${credentialDisplay[vcEntity.credentialIdentifier] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
 								>
 									<CredentialInfo credential={{ ...vcEntity }} mainClassName={"text-xs w-full"} />
 								</div>
