@@ -175,7 +175,7 @@ const History = () => {
 										<div className='h-[30vh]'>
 
 											<div className={`transition-all ease-in-out duration-500 ${(currentSlide === index + 1) ? 'max-h-[30vh] overflow-y-auto rounded-md custom-scrollbar my-2 bg-gray-800" opacity-100' : 'max-h-0 opacity-0'}`}>
-												<CredentialInfo credential={vcEntity} />
+												<CredentialInfo credential={vcEntity} displayAgeFields='true' />
 											</div>
 										</div>
 
