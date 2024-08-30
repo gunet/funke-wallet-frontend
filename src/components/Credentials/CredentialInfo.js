@@ -100,6 +100,10 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('familyName', 'Family Name', parsedCredential?.family_name)}
 							{renderRow('familyName', 'Given Name', parsedCredential?.given_name)}
 							{renderRow('familyName', 'Birth Family Name', parsedCredential?.birth_family_name)}
+							{renderRow('familyName', 'Birth Family Name', parsedCredential?.family_name_birth)}
+							{parsedCredential?.nationalities && renderRow('placeOfBirth', 'Nationality', parsedCredential?.nationalities[0])}
+							{renderRow('placeOfBirth', 'Nationality', parsedCredential?.nationality?.value)}
+							{renderRow('placeOfBirth', 'Nationality (Country)', parsedCredential?.nationality?.countryName)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.place_of_birth?.locality)}
 							{renderRow('placeOfBirth', 'Place of Birth', parsedCredential?.birth_place)}
 							{renderRow('issuingCountry', 'Issuing Country', parsedCredential?.issuing_country)}
@@ -110,6 +114,7 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.dateOfBirth)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birthdate)}
 							{renderRow('dateOfBirth', 'Birthday', parsedCredential?.birth_date)}
+
 							{displayAgeFields === 'true' && (
 								<>
 									{renderRow('over12', 'Age Over 12', parsedCredential?.age_equal_or_over ? parsedCredential?.age_equal_or_over['12'] : null)}
@@ -125,15 +130,22 @@ const CredentialInfo = ({ credential, mainClassName = "text-xs sm:text-sm md:tex
 									{renderRow('over21', 'Age Over 21', parsedCredential?.age_over_21)}
 									{renderRow('over', 'Age Over 65', parsedCredential?.age_over_65)}
 
+									{renderRow('dateOfBirth', 'Birthday (Year)', parsedCredential?.age_birth_year)}
+									{renderRow('dateOfBirth', 'Age in years', parsedCredential?.age_in_years)}
+
 								</>
 							)}
 							{displayExtraFields === 'true' && (
 								<>
+									{renderRow('address', 'Resident Country', parsedCredential?.resident_country)}
+									{renderRow('address', 'Resident City', parsedCredential?.resident_city)}
+									{renderRow('address', 'Resident Postal Code', parsedCredential?.resident_postal_code)}
+									{renderRow('address', 'Resident Street', parsedCredential?.resident_street)}
+
 									{renderRow('address', 'Address (City)', parsedCredential?.address?.locality)}
+									{renderRow('address', 'Address (Country)', parsedCredential?.address?.country)}
 									{renderRow('address', 'Address (Postal Code)', parsedCredential?.address?.postal_code)}
 									{renderRow('address', 'Address (Street)', parsedCredential?.address?.street_address)}
-									{renderRow('dateOfBirth', 'Birthday (Year)', parsedCredential?.age_birth_year)}
-									{renderRow('dateOfBirth', 'Age in years', parsedCredential?.age_in_years)}
 								</>
 							)}
 						</>
