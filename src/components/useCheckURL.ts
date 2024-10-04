@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCommunicationProtocols } from './useCommunicationProtocols';
 import SessionContext from '../context/SessionContext';
 import { BackgroundTasksContext } from '../context/BackgroundTasksContext';
+import { AuthorizationRequestInvalidRequestUriSignatureError } from '../lib/services/OpenID4VPRelyingParty';
 
 export enum HandleOutboundRequestError {
 	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
@@ -117,7 +118,15 @@ function useCheckURL(urlToCheck: string): {
 				setVerifierDomainName(verifierDomainName);
 				setConformantCredentialsMap(jsonedMap);
 				setShowSelectCredentialsPopup(true);
-			}).catch(err => {
+			}).catch((err) => {
+				if (err instanceof AuthorizationRequestInvalidRequestUriSignatureError) {
+					console.log("Handling error AuthorizationRequestInvalidRequestUriSignatureError...")
+					console.error(err);
+					setTextMessagePopup({ title: err.name, description: err.message });
+					setTypeMessagePopup('error');
+					setMessagePopup(true);
+					return;
+				}
 				console.log("Failed to handle authorization req");
 				console.error(err)
 			})
@@ -145,9 +154,9 @@ function useCheckURL(urlToCheck: string): {
 
 	useEffect(() => {
 		if (selectionMap) {
-			protocols.openID4VPRelyingParty.sendAuthorizationResponse(new Map(Object.entries(selectionMap))).then(({ url }) => {
-				if (url) {
-					window.location.href = url;
+			protocols.openID4VPRelyingParty.sendAuthorizationResponse(new Map(Object.entries(selectionMap))).then((result) => {
+				if (result.url) {
+					window.location.href = result.url;
 				}
 			}).catch((err) => console.error(err));
 		}

@@ -19,6 +19,24 @@ const pemToBinary = (pem) => {
 	return bytes.buffer;
 };
 
+export async function extractSAN(pemCert: string): Promise<string[] | null> {
+	const derCert = pemToBinary(pemCert);
+
+	const asn1 = fromBER(derCert);
+	if (asn1.offset === -1) {
+			throw new Error("Error parsing ASN.1 structure");
+	}
+
+	const cert = new pkijs.Certificate({ schema: asn1.result });
+	if (!cert.extensions) {
+		return null;
+	}
+	const sanExtension = cert.extensions.find(ext => ext.extnID === "2.5.29.17"); // OID for SAN
+	if (sanExtension.parsedValue['altNames']) {
+		return sanExtension.parsedValue['altNames'].map((altName) => altName.value);
+	}
+	return null;
+}
 
 
 export function fromPemToPKIJSCertificate(pem) {

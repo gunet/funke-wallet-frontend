@@ -7,11 +7,21 @@ import { VerifiableCredentialFormat } from "../schemas/vc";
 import { parseMsoMdocCredential } from "../mdl/mdl";
 import { JSONPath } from "jsonpath-plus";
 import { generateRandomIdentifier } from "../utils/generateRandomIdentifier";
-import { base64url } from "jose";
+import { base64url, importX509, jwtVerify } from "jose";
 import { OpenID4VPRelyingPartyState } from "../types/OpenID4VPRelyingPartyState";
 import { OpenID4VPRelyingPartyStateRepository } from "./OpenID4VPRelyingPartyStateRepository";
 import { IHttpProxy } from "../interfaces/IHttpProxy";
 import { parseCredential } from "../../functions/parseCredential";
+import { extractSAN, getPublicKeyFromB64Cert } from "../utils/pki";
+
+export class AuthorizationRequestInvalidRequestUriSignatureError extends Error {
+  constructor(msg) {
+    super(msg); // Call the parent class constructor with the message
+    this.name = "AuthorizationRequestInvalidRequestUriSignatureError"; // Set the error name (optional but recommended)
+    Object.setPrototypeOf(this, AuthorizationRequestInvalidRequestUriSignatureError.prototype); // Fix the prototype chain
+  }
+}
+
 
 export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 
@@ -53,6 +63,17 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			const requestUriResponse = await this.httpProxy.get(request_uri, {});
 			const requestObject = requestUriResponse.data; // jwt
 			const [header, payload, sig] = requestObject.split('.');
+			const parsedHeader = JSON.parse(new TextDecoder().decode(base64url.decode(header)));
+
+			console.log("Parsed header = ", parsedHeader)
+			const publicKey = await importX509(getPublicKeyFromB64Cert(parsedHeader.x5c[0]), parsedHeader.alg).catch(() => null);
+			console.log("Public key = ", publicKey)
+			const verificationResult = await jwtVerify(requestObject, publicKey).catch(() => null);
+			if (verificationResult == null) {
+				console.log("Signature verification of request_uri failed");
+				throw new AuthorizationRequestInvalidRequestUriSignatureError("Signature verification of request_uri failed");
+			}
+			console.log("Verification result = ", verificationResult);
 			const p = JSON.parse(new TextDecoder().decode(base64url.decode(payload)));
 			client_id = p.client_id;
 			client_id_scheme = p.client_id_scheme;
@@ -60,13 +81,33 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 			presentation_definition = p.presentation_definition;
 			response_mode = p.response_mode;
 			response_uri = p.response_uri ?? p.redirect_uri;
+
 			state = p.state;
 			nonce = p.nonce;
 			client_metadata = p.client_metadata;
 			if (!response_uri.startsWith("http")) {
 				response_uri = `https://${response_uri}`;
 			}
+
+			if (new URL(request_uri).hostname != new URL(response_uri).hostname) {
+				console.log("Hostname of request_uri is different from response_uri")
+				throw new AuthorizationRequestInvalidRequestUriSignatureError("Hostname of request_uri is different from response_uri");
+			}
+			const altNames = await extractSAN('-----BEGIN CERTIFICATE-----\n' + parsedHeader.x5c[0] + '\n-----END CERTIFICATE-----');
+
+			if (!altNames || altNames.length == 0) {
+				console.log("No SAN found");
+				throw new AuthorizationRequestInvalidRequestUriSignatureError("No SAN found");
+			}
+
+			if (!altNames.includes(new URL(response_uri).hostname)) {
+				console.log("altnames = ", altNames)
+				console.log("request_uri uri hostname = ", new URL(request_uri).hostname)
+				console.log("Hostname of request_uri is not included in the SAN list")
+				throw new AuthorizationRequestInvalidRequestUriSignatureError("Hostname of request_uri is not included in the SAN list");
+			}
 		}
+
 
 		const vcList = await this.getAllStoredVerifiableCredentials().then((res) => res.verifiableCredentials);
 
@@ -293,7 +334,11 @@ export class OpenID4VPRelyingParty implements IOpenID4VPRelyingParty {
 		const formData = new URLSearchParams();
 		formData.append('vp_token', generatedVPs[0]);
 		formData.append('presentation_submission', JSON.stringify(presentationSubmission));
-		formData.append('state', S.state);
+
+		if (S.state) {
+			formData.append('state', S.state);
+
+		}
 
 		const credentialIdentifiers = originalVCs.map((vc) => vc.credentialIdentifier);
 
